@@ -1,0 +1,75 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <title>Local Calendar CalDAV Mirror</title>
+    <link rel="stylesheet" href="options.css">
+  </head>
+  <body>
+    <main>
+      <h1>Local Calendar CalDAV Mirror</h1>
+
+      <section>
+        <label>
+          Local calendar
+          <select id="calendarId"></select>
+        </label>
+        <button id="refreshCalendars" type="button">Refresh</button>
+      </section>
+
+      <section>
+        <label>
+          CalDAV collection URL
+          <input id="collectionUrl" type="url" placeholder="https://example.com/dav/calendars/user/mirror/">
+        </label>
+        <label>
+          Username
+          <input id="username" autocomplete="username">
+        </label>
+        <label>
+          Password
+          <input id="password" type="password" autocomplete="current-password">
+        </label>
+      </section>
+
+      <section class="grid">
+        <label>
+          Sync interval minutes
+          <input id="intervalMinutes" type="number" min="1" step="1">
+        </label>
+        <label>
+          Delete guard percent
+          <input id="deleteLimitPercent" type="number" min="1" max="100" step="1">
+        </label>
+      </section>
+
+      <section>
+        <label class="inline">
+          <input id="enabled" type="checkbox">
+          Run automatic sync
+        </label>
+      </section>
+
+      <section class="actions">
+        <button id="save" type="button">Save</button>
+        <button id="validate" type="button">Validate CalDAV</button>
+        <button id="backup" type="button">Download ICS backup</button>
+        <button id="dryRun" type="button">Dry run</button>
+        <button id="syncNow" type="button">Sync now</button>
+        <button id="syncForce" type="button">Sync now, force deletes</button>
+        <button id="resetState" type="button">Reset mirror state</button>
+      </section>
+
+      <section>
+        <h2>Status</h2>
+        <pre id="status"></pre>
+      </section>
+
+      <section>
+        <h2>Log</h2>
+        <pre id="logs"></pre>
+      </section>
+    </main>
+    <script src="options.js"></script>
+  </body>
+</html>

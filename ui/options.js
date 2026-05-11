@@ -1,0 +1,144 @@
+"use strict";
+
+const fields = {
+  calendarId: document.getElementById("calendarId"),
+  collectionUrl: document.getElementById("collectionUrl"),
+  username: document.getElementById("username"),
+  password: document.getElementById("password"),
+  intervalMinutes: document.getElementById("intervalMinutes"),
+  deleteLimitPercent: document.getElementById("deleteLimitPercent"),
+  enabled: document.getElementById("enabled")
+};
+
+const statusNode = document.getElementById("status");
+const logsNode = document.getElementById("logs");
+
+function setStatus(value) {
+  statusNode.textContent = typeof value === "string" ? value : JSON.stringify(value, null, 2);
+}
+
+function readSettings() {
+  return {
+    calendarId: fields.calendarId.value,
+    collectionUrl: fields.collectionUrl.value.trim(),
+    username: fields.username.value,
+    password: fields.password.value,
+    intervalMinutes: Number(fields.intervalMinutes.value || 15),
+    deleteLimitPercent: Number(fields.deleteLimitPercent.value || 30),
+    enabled: fields.enabled.checked
+  };
+}
+
+function writeSettings(settings) {
+  fields.calendarId.value = settings.calendarId || "";
+  fields.collectionUrl.value = settings.collectionUrl || "";
+  fields.username.value = settings.username || "";
+  fields.password.value = settings.password || "";
+  fields.intervalMinutes.value = settings.intervalMinutes || 15;
+  fields.deleteLimitPercent.value = settings.deleteLimitPercent || 30;
+  fields.enabled.checked = !!settings.enabled;
+}
+
+async function send(type, payload = {}) {
+  return browser.runtime.sendMessage({ type, ...payload });
+}
+
+async function refreshCalendars(selectedId = "") {
+  const calendars = await send("listCalendars");
+  fields.calendarId.textContent = "";
+  for (const calendar of calendars) {
+    const option = document.createElement("option");
+    option.value = calendar.id;
+    option.textContent = `${calendar.name} (${calendar.type}${calendar.isLocal ? ", local" : ""})`;
+    option.disabled = !calendar.isLocal;
+    fields.calendarId.append(option);
+  }
+  fields.calendarId.value = selectedId;
+}
+
+async function refreshLogs() {
+  const logs = await send("getLogs");
+  logsNode.textContent = logs.map(log => {
+    const detail = log.detail ? `\n${JSON.stringify(log.detail, null, 2)}` : "";
+    return `[${log.at}] ${log.level.toUpperCase()}: ${log.message}${detail}`;
+  }).join("\n\n");
+}
+
+async function withBusy(button, action) {
+  const previous = button.disabled;
+  button.disabled = true;
+  try {
+    const result = await action();
+    setStatus(result || "Done.");
+    await refreshLogs();
+  } catch (error) {
+    setStatus(error.message);
+  } finally {
+    button.disabled = previous;
+  }
+}
+
+document.getElementById("refreshCalendars").addEventListener("click", () => {
+  withBusy(document.getElementById("refreshCalendars"), () => refreshCalendars(fields.calendarId.value));
+});
+
+document.getElementById("save").addEventListener("click", event => {
+  withBusy(event.currentTarget, async () => {
+    await send("setSettings", { settings: readSettings() });
+    return "Settings saved.";
+  });
+});
+
+document.getElementById("validate").addEventListener("click", event => {
+  withBusy(event.currentTarget, () => send("validateCalDav", { settings: readSettings() }));
+});
+
+document.getElementById("backup").addEventListener("click", event => {
+  withBusy(event.currentTarget, async () => {
+    const settings = readSettings();
+    const ics = await send("exportBackup", { calendarId: settings.calendarId });
+    const blob = new Blob([ics], { type: "text/calendar;charset=utf-8" });
+    const link = document.createElement("a");
+    link.href = URL.createObjectURL(blob);
+    link.download = `local-calendar-backup-${new Date().toISOString().slice(0, 10)}.ics`;
+    link.click();
+    URL.revokeObjectURL(link.href);
+    return "Backup download started.";
+  });
+});
+
+document.getElementById("dryRun").addEventListener("click", event => {
+  withBusy(event.currentTarget, async () => {
+    await send("setSettings", { settings: readSettings() });
+    return send("dryRun");
+  });
+});
+
+document.getElementById("syncNow").addEventListener("click", event => {
+  withBusy(event.currentTarget, async () => {
+    await send("setSettings", { settings: readSettings() });
+    return send("syncNow", { forceDeletes: false });
+  });
+});
+
+document.getElementById("syncForce").addEventListener("click", event => {
+  withBusy(event.currentTarget, async () => {
+    await send("setSettings", { settings: readSettings() });
+    return send("syncNow", { forceDeletes: true });
+  });
+});
+
+document.getElementById("resetState").addEventListener("click", event => {
+  withBusy(event.currentTarget, async () => {
+    await send("resetState");
+    return "Mirror state reset. Remote events were not changed.";
+  });
+});
+
+document.addEventListener("DOMContentLoaded", async () => {
+  const settings = await send("getSettings");
+  await refreshCalendars(settings.calendarId);
+  writeSettings(settings);
+  await refreshLogs();
+  setStatus("Ready.");
+});

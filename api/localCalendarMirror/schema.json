@@ -1,0 +1,27 @@
+[
+  {
+    "namespace": "localCalendarMirror",
+    "description": "Privileged Thunderbird calendar access for Local Calendar CalDAV Mirror.",
+    "functions": [
+      {
+        "name": "listCalendars",
+        "type": "function",
+        "async": true,
+        "description": "List configured Thunderbird calendars.",
+        "parameters": []
+      },
+      {
+        "name": "exportCalendar",
+        "type": "function",
+        "async": true,
+        "description": "Export events from a Thunderbird calendar as sanitized iCalendar payloads.",
+        "parameters": [
+          {
+            "name": "calendarId",
+            "type": "string"
+          }
+        ]
+      }
+    ]
+  }
+]

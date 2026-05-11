@@ -1,0 +1,102 @@
+body {
+  color: #1f2933;
+  background: #f6f8fb;
+  font: 14px/1.45 system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  margin: 0;
+}
+
+main {
+  max-width: 920px;
+  margin: 0 auto;
+  padding: 28px;
+}
+
+h1 {
+  font-size: 24px;
+  font-weight: 650;
+  margin: 0 0 24px;
+}
+
+h2 {
+  font-size: 16px;
+  margin: 0 0 10px;
+}
+
+section {
+  background: #ffffff;
+  border: 1px solid #d8dee8;
+  border-radius: 6px;
+  margin: 0 0 16px;
+  padding: 16px;
+}
+
+label {
+  display: block;
+  font-weight: 600;
+  margin: 0 0 12px;
+}
+
+label.inline {
+  align-items: center;
+  display: flex;
+  gap: 8px;
+  margin: 0;
+}
+
+input,
+select {
+  box-sizing: border-box;
+  display: block;
+  font: inherit;
+  margin-top: 6px;
+  max-width: 100%;
+  padding: 8px;
+  width: 100%;
+}
+
+input[type="checkbox"] {
+  display: inline-block;
+  margin: 0;
+  width: auto;
+}
+
+button {
+  background: #1f6feb;
+  border: 1px solid #195ec7;
+  border-radius: 5px;
+  color: #ffffff;
+  cursor: pointer;
+  font: inherit;
+  padding: 8px 12px;
+}
+
+button:hover {
+  background: #195ec7;
+}
+
+button:disabled {
+  cursor: wait;
+  opacity: 0.6;
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.grid {
+  display: grid;
+  gap: 16px;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+}
+
+pre {
+  background: #101828;
+  border-radius: 6px;
+  color: #dbe7ff;
+  min-height: 80px;
+  overflow: auto;
+  padding: 12px;
+  white-space: pre-wrap;
+}
