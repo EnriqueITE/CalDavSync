@@ -79,6 +79,11 @@ button:disabled {
   opacity: 0.6;
 }
 
+.muted {
+  color: #5f6b7a;
+  margin: -4px 0 12px;
+}
+
 .actions {
   display: flex;
   flex-wrap: wrap;

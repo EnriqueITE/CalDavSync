@@ -12,6 +12,7 @@ const fields = {
 
 const statusNode = document.getElementById("status");
 const logsNode = document.getElementById("logs");
+const passwordStatusNode = document.getElementById("passwordStatus");
 
 function setStatus(value) {
   statusNode.textContent = typeof value === "string" ? value : JSON.stringify(value, null, 2);
@@ -33,10 +34,13 @@ function writeSettings(settings) {
   fields.calendarId.value = settings.calendarId || "";
   fields.collectionUrl.value = settings.collectionUrl || "";
   fields.username.value = settings.username || "";
-  fields.password.value = settings.password || "";
+  fields.password.value = "";
   fields.intervalMinutes.value = settings.intervalMinutes || 15;
   fields.deleteLimitPercent.value = settings.deleteLimitPercent || 30;
   fields.enabled.checked = !!settings.enabled;
+  passwordStatusNode.textContent = settings.hasSavedPassword
+    ? "A CalDAV password is saved encrypted in local extension storage."
+    : "No CalDAV password is saved.";
 }
 
 async function send(type, payload = {}) {
@@ -84,13 +88,22 @@ document.getElementById("refreshCalendars").addEventListener("click", () => {
 
 document.getElementById("save").addEventListener("click", event => {
   withBusy(event.currentTarget, async () => {
-    await send("setSettings", { settings: readSettings() });
+    const settings = await send("setSettings", { settings: readSettings() });
+    writeSettings(settings);
     return "Settings saved.";
   });
 });
 
 document.getElementById("validate").addEventListener("click", event => {
   withBusy(event.currentTarget, () => send("validateCalDav", { settings: readSettings() }));
+});
+
+document.getElementById("clearCredentials").addEventListener("click", event => {
+  withBusy(event.currentTarget, async () => {
+    const settings = await send("clearCredentials");
+    writeSettings(settings);
+    return "Saved password cleared.";
+  });
 });
 
 document.getElementById("backup").addEventListener("click", event => {
@@ -109,21 +122,21 @@ document.getElementById("backup").addEventListener("click", event => {
 
 document.getElementById("dryRun").addEventListener("click", event => {
   withBusy(event.currentTarget, async () => {
-    await send("setSettings", { settings: readSettings() });
+    writeSettings(await send("setSettings", { settings: readSettings() }));
     return send("dryRun");
   });
 });
 
 document.getElementById("syncNow").addEventListener("click", event => {
   withBusy(event.currentTarget, async () => {
-    await send("setSettings", { settings: readSettings() });
+    writeSettings(await send("setSettings", { settings: readSettings() }));
     return send("syncNow", { forceDeletes: false });
   });
 });
 
 document.getElementById("syncForce").addEventListener("click", event => {
   withBusy(event.currentTarget, async () => {
-    await send("setSettings", { settings: readSettings() });
+    writeSettings(await send("setSettings", { settings: readSettings() }));
     return send("syncNow", { forceDeletes: true });
   });
 });

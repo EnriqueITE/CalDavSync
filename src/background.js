@@ -4,20 +4,66 @@ const DEFAULT_SETTINGS = {
   calendarId: "",
   collectionUrl: "",
   username: "",
-  password: "",
   deleteLimitPercent: 30,
   intervalMinutes: 15,
   enabled: false
 };
 
+function sanitizeSettings(settings) {
+  const sanitized = { ...settings };
+  delete sanitized.password;
+  return sanitized;
+}
+
 async function getSettings() {
   const { settings } = await browser.storage.local.get({ settings: DEFAULT_SETTINGS });
-  return { ...DEFAULT_SETTINGS, ...(settings || {}) };
+  return {
+    ...DEFAULT_SETTINGS,
+    ...sanitizeSettings(settings || {}),
+    hasSavedPassword: await Secrets.hasPassword()
+  };
 }
 
 async function setSettings(settings) {
-  await browser.storage.local.set({ settings: { ...DEFAULT_SETTINGS, ...settings } });
+  if (settings.password) {
+    await Secrets.savePassword(settings.password);
+  }
+  await browser.storage.local.set({
+    settings: {
+      ...DEFAULT_SETTINGS,
+      ...sanitizeSettings(settings)
+    }
+  });
   await configureAlarm();
+  return getSettings();
+}
+
+async function settingsWithPassword(settings = null) {
+  const safeSettings = settings ? { ...DEFAULT_SETTINGS, ...sanitizeSettings(settings) } : await getSettings();
+  const password = settings?.password || await Secrets.loadPassword();
+  return { ...safeSettings, password };
+}
+
+function redactDetail(detail) {
+  if (!detail || typeof detail !== "object") {
+    return detail;
+  }
+  return JSON.parse(JSON.stringify(detail, (key, value) => {
+    if (key.toLowerCase().includes("password")) {
+      return "[redacted]";
+    }
+    if (key === "collectionUrl" && typeof value === "string") {
+      try {
+        const url = new URL(value);
+        url.username = "";
+        url.password = "";
+        return url.toString();
+      } catch (_error) {
+        return "[configured]";
+      }
+    }
+    return value;
+  }));
 }
 
 async function appendLog(level, message, detail = null) {
@@ -26,7 +72,7 @@ async function appendLog(level, message, detail = null) {
     at: new Date().toISOString(),
     level,
     message,
-    detail
+    detail: redactDetail(detail)
   });
   await browser.storage.local.set({ logs: logs.slice(0, 200) });
 }
@@ -42,7 +88,7 @@ async function configureAlarm() {
 }
 
 async function runSync(options = {}) {
-  const settings = await getSettings();
+  const settings = await settingsWithPassword();
   const summary = await MirrorSync.run(settings, options);
   await appendLog(
     summary.errors.length ? "error" : "info",
@@ -77,7 +123,7 @@ browser.runtime.onMessage.addListener((message) => {
     return setSettings(message.settings);
   }
   if (message?.type === "validateCalDav") {
-    return CalDav.validate(message.settings);
+    return settingsWithPassword(message.settings).then(settings => CalDav.validate(settings));
   }
   if (message?.type === "dryRun") {
     return runSync({ dryRun: true });
@@ -87,6 +133,9 @@ browser.runtime.onMessage.addListener((message) => {
   }
   if (message?.type === "resetState") {
     return MirrorSync.resetState();
+  }
+  if (message?.type === "clearCredentials") {
+    return Secrets.clearPassword().then(getSettings);
   }
   if (message?.type === "exportBackup") {
     return MirrorSync.exportBackup(message.calendarId);

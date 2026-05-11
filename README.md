@@ -1,4 +1,4 @@
-# Local Calendar CalDAV Mirror
+# CalDavSync
 
 Thunderbird extension that mirrors one local Thunderbird calendar to one CalDAV
 collection. Thunderbird does not need to configure that CalDAV calendar.
@@ -14,7 +14,8 @@ This is an initial implementation for manual testing on Thunderbird 128+.
 It includes:
 
 - local calendar selection;
-- CalDAV collection URL, username, and password settings;
+- CalDAV collection URL and username settings;
+- encrypted local CalDAV password storage using WebCrypto AES-GCM;
 - `PROPFIND` validation;
 - dry-run planning;
 - create, update, and delete mirroring;
@@ -23,15 +24,15 @@ It includes:
 - manual ICS backup download;
 - automatic periodic sync via Thunderbird alarms.
 
-## Install for testing
+## Install private XPI
 
 1. Open Thunderbird.
 2. Go to Add-ons and Themes.
-3. Open the gear menu and choose Debug Add-ons.
-4. Choose Load Temporary Add-on.
-5. Select this directory's `manifest.json`.
+3. Open the gear menu and choose Install Add-on From File.
+4. Select the generated `CalDavSync-vX.Y.Z.xpi`.
 
-Temporary add-ons are removed when Thunderbird restarts.
+For development, use Debug Add-ons and load this directory's `manifest.json`
+as a temporary add-on.
 
 ## Configure
 
@@ -39,7 +40,7 @@ Temporary add-ons are removed when Thunderbird restarts.
 2. Select a local calendar. Non-local calendars are disabled.
 3. Enter the CalDAV collection URL, for example:
    `https://example.com/dav/calendars/user/local-mirror/`
-4. Enter credentials.
+4. Enter credentials. Leave the password blank later to keep the saved password.
 5. Click Validate CalDAV.
 6. Click Download ICS backup.
 7. Click Dry run and review the planned operations.
@@ -58,8 +59,9 @@ Use a dedicated, preferably empty CalDAV collection for the first test.
 
 ## Important limitations
 
-- Passwords are stored in extension local storage in this first version.
-  Before real daily use, move credentials to Thunderbird's login manager.
+- The CalDAV password is encrypted in extension local storage with a local
+  automatic key. This avoids plain text storage, but anyone with full access to
+  the Thunderbird profile may also recover the key.
 - The extension relies on Thunderbird Experiment APIs, which have full
   Thunderbird privileges and can change across major Thunderbird versions.
 - The CalDAV server must not send scheduling mail merely because a passive
@@ -69,9 +71,11 @@ Use a dedicated, preferably empty CalDAV collection for the first test.
 
 ## Package
 
-Create an `.xpi` by zipping the contents of this directory, not the directory
-itself. PowerShell example:
+Create a private XPI package:
 
 ```powershell
-Compress-Archive -Path manifest.json,api,src,ui,README.md -DestinationPath local-caldav-mirror.xpi -Force
+.\scripts\package.ps1
 ```
+
+The script validates JSON and JavaScript syntax, then creates
+`CalDavSync-vX.Y.Z.xpi`.

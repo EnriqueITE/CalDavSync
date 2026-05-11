@@ -2,12 +2,12 @@
 <html>
   <head>
     <meta charset="utf-8">
-    <title>Local Calendar CalDAV Mirror</title>
+    <title>CalDavSync</title>
     <link rel="stylesheet" href="options.css">
   </head>
   <body>
     <main>
-      <h1>Local Calendar CalDAV Mirror</h1>
+      <h1>CalDavSync</h1>
 
       <section>
         <label>
@@ -28,8 +28,10 @@
         </label>
         <label>
           Password
-          <input id="password" type="password" autocomplete="current-password">
+          <input id="password" type="password" autocomplete="current-password" placeholder="Leave blank to keep saved password">
         </label>
+        <p id="passwordStatus" class="muted"></p>
+        <button id="clearCredentials" type="button">Clear saved password</button>
       </section>
 
       <section class="grid">
