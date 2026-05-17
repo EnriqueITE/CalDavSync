@@ -172,15 +172,19 @@ var localCalendarMirror = class extends ExtensionCommon.ExtensionAPI {
   getAPI() {
     return {
       localCalendarMirror: {
-        async listCalendars() {
-          const calendars = getCalendars().map(calendarSummary);
-          if (calendars.length) {
-            return calendars;
+        listCalendars() {
+          try {
+            const calendars = getCalendars().map(calendarSummary);
+            if (calendars.length) {
+              return calendars;
+            }
+          } catch (_error) {
+            // Fall back to registry prefs below. Diagnostics exposes the error.
           }
           return getRegistryCalendars();
         },
 
-        async diagnostics() {
+        diagnostics() {
           let managerCalendars = [];
           let managerError = "";
           try {
