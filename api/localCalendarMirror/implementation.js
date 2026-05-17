@@ -23,7 +23,11 @@ function getCal() {
 }
 
 function getCalendars() {
-  return getCalendarManager().getCalendars();
+  try {
+    return getCalendarManager().getCalendars();
+  } catch (_error) {
+    return [];
+  }
 }
 
 function getCalendarManager() {
@@ -34,8 +38,12 @@ function getCalendarManager() {
   if (typeof cal?.getCalendarManager == "function") {
     return cal.getCalendarManager();
   }
-  return Components.classes["@mozilla.org/calendar/manager;1"]
-    .getService(Components.interfaces.calICalendarManager);
+  try {
+    return Components.classes["@mozilla.org/calendar/manager;1"]
+      .getService(Components.interfaces.calICalendarManager);
+  } catch (_error) {
+    return { getCalendars: () => [] };
+  }
 }
 
 function getCalendar(calendarId) {
@@ -186,13 +194,9 @@ var CalDavSync = class extends ExtensionCommon.ExtensionAPI {
 
         listCalendars() {
           return wrapResult(() => {
-            try {
-              const calendars = getCalendars().map(calendarSummary);
-              if (calendars.length) {
-                return calendars;
-              }
-            } catch (_error) {
-              // Fall back to registry prefs below. Diagnostics exposes the error.
+            const managerCalendars = getCalendars().map(calendarSummary);
+            if (managerCalendars.length) {
+              return managerCalendars;
             }
             return getRegistryCalendars();
           });
