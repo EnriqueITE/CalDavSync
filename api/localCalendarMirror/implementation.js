@@ -3,9 +3,15 @@
 var { ExtensionCommon } = ChromeUtils.importESModule(
   "resource://gre/modules/ExtensionCommon.sys.mjs"
 );
-var { Services } = ChromeUtils.importESModule(
-  "resource://gre/modules/Services.sys.mjs"
-);
+if (typeof Services === "undefined") {
+  try {
+    var { Services } = ChromeUtils.importESModule(
+      "resource://gre/modules/Services.sys.mjs"
+    );
+  } catch (_error) {
+    // Thunderbird 128+: Services is available as a global.
+  }
+}
 var calModule = null;
 var calModuleError = "";
 
