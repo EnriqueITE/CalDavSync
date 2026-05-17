@@ -112,7 +112,7 @@ browser.alarms.onAlarm.addListener(async alarm => {
   }
 });
 
-browser.runtime.onMessage.addListener((message) => {
+async function handleMessage(message) {
   if (message?.type === "listCalendars") {
     return browser.localCalendarMirror.listCalendars();
   }
@@ -126,7 +126,8 @@ browser.runtime.onMessage.addListener((message) => {
     return setSettings(message.settings);
   }
   if (message?.type === "validateCalDav") {
-    return settingsWithPassword(message.settings).then(settings => CalDav.validate(settings));
+    const settings = await settingsWithPassword(message.settings);
+    return CalDav.validate(settings);
   }
   if (message?.type === "dryRun") {
     return runSync({ dryRun: true });
@@ -138,7 +139,8 @@ browser.runtime.onMessage.addListener((message) => {
     return MirrorSync.resetState();
   }
   if (message?.type === "clearCredentials") {
-    return Secrets.clearPassword().then(getSettings);
+    await Secrets.clearPassword();
+    return getSettings();
   }
   if (message?.type === "exportBackup") {
     return MirrorSync.exportBackup(message.calendarId);
@@ -146,5 +148,18 @@ browser.runtime.onMessage.addListener((message) => {
   if (message?.type === "getLogs") {
     return browser.storage.local.get({ logs: [] }).then(result => result.logs);
   }
-  return undefined;
+  throw new Error(`Unknown message type: ${message?.type || "missing"}`);
+}
+
+browser.runtime.onMessage.addListener(async message => {
+  try {
+    return { ok: true, value: await handleMessage(message) };
+  } catch (error) {
+    await appendLog("error", error.message, { type: message?.type, stack: error.stack || "" });
+    return {
+      ok: false,
+      error: error.message || String(error),
+      stack: error.stack || ""
+    };
+  }
 });

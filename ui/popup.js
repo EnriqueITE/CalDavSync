@@ -3,7 +3,11 @@
 const output = document.getElementById("output");
 
 async function send(type, payload = {}) {
-  return browser.runtime.sendMessage({ type, ...payload });
+  const response = await browser.runtime.sendMessage({ type, ...payload });
+  if (!response?.ok) {
+    throw new Error(response?.error || "Background request failed.");
+  }
+  return response.value;
 }
 
 function show(value) {

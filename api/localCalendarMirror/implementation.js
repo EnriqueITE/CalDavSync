@@ -6,17 +6,32 @@ var { ExtensionCommon } = ChromeUtils.importESModule(
 var { Services } = ChromeUtils.importESModule(
   "resource://gre/modules/Services.sys.mjs"
 );
-var { cal } = ChromeUtils.importESModule("resource:///modules/calendar/calUtils.sys.mjs");
+var calModule = null;
+var calModuleError = "";
+
+function getCal() {
+  if (calModule || calModuleError) {
+    return calModule?.cal || null;
+  }
+
+  try {
+    calModule = ChromeUtils.importESModule("resource:///modules/calendar/calUtils.sys.mjs");
+  } catch (error) {
+    calModuleError = error.message;
+  }
+  return calModule?.cal || null;
+}
 
 function getCalendars() {
   return getCalendarManager().getCalendars();
 }
 
 function getCalendarManager() {
-  if (cal.manager) {
+  const cal = getCal();
+  if (cal?.manager) {
     return cal.manager;
   }
-  if (typeof cal.getCalendarManager == "function") {
+  if (typeof cal?.getCalendarManager == "function") {
     return cal.getCalendarManager();
   }
   return Components.classes["@mozilla.org/calendar/manager;1"]
@@ -62,6 +77,15 @@ function getRegistryCalendars() {
       source: "registry"
     };
   });
+}
+
+function getIcsService() {
+  const cal = getCal();
+  if (cal?.getIcsService) {
+    return cal.getIcsService();
+  }
+  return Components.classes["@mozilla.org/calendar/ics-service;1"]
+    .getService(Components.interfaces.calIIcsService);
 }
 
 function calendarSummary(calendar) {
@@ -131,11 +155,12 @@ function serializeEvent(item) {
     return null;
   }
 
-  const vcalendar = cal.getIcsService().createIcalComponent("VCALENDAR");
-  const version = cal.getIcsService().createIcalProperty("VERSION");
+  const icsService = getIcsService();
+  const vcalendar = icsService.createIcalComponent("VCALENDAR");
+  const version = icsService.createIcalProperty("VERSION");
   version.value = "2.0";
   vcalendar.addProperty(version);
-  const prodid = cal.getIcsService().createIcalProperty("PRODID");
+  const prodid = icsService.createIcalProperty("PRODID");
   prodid.value = "-//Local Calendar CalDAV Mirror//EN";
   vcalendar.addProperty(prodid);
   vcalendar.addSubcomponent(component.clone());
@@ -164,8 +189,10 @@ var localCalendarMirror = class extends ExtensionCommon.ExtensionAPI {
             managerError = error.message;
           }
           return {
-            hasCalManager: !!cal.manager,
-            hasGetCalendarManager: typeof cal.getCalendarManager == "function",
+            calModuleLoaded: !!getCal(),
+            calModuleError,
+            hasCalManager: !!getCal()?.manager,
+            hasGetCalendarManager: typeof getCal()?.getCalendarManager == "function",
             managerError,
             managerCalendars,
             registryCalendars: getRegistryCalendars()

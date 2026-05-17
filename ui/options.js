@@ -44,7 +44,12 @@ function writeSettings(settings) {
 }
 
 async function send(type, payload = {}) {
-  return browser.runtime.sendMessage({ type, ...payload });
+  const response = await browser.runtime.sendMessage({ type, ...payload });
+  if (!response?.ok) {
+    const message = response?.error || "Background request failed.";
+    throw new Error(response?.stack ? `${message}\n\n${response.stack}` : message);
+  }
+  return response.value;
 }
 
 async function refreshCalendars(selectedId = "") {
