@@ -169,76 +169,86 @@ function serializeEvent(item) {
 }
 
 var localCalendarMirror = class extends ExtensionCommon.ExtensionAPI {
-  getAPI() {
+  getAPI(context) {
+    function wrapResult(callback) {
+      return context.wrapPromise(Promise.resolve().then(callback));
+    }
+
     return {
       localCalendarMirror: {
         listCalendars() {
-          try {
-            const calendars = getCalendars().map(calendarSummary);
-            if (calendars.length) {
-              return calendars;
+          return wrapResult(() => {
+            try {
+              const calendars = getCalendars().map(calendarSummary);
+              if (calendars.length) {
+                return calendars;
+              }
+            } catch (_error) {
+              // Fall back to registry prefs below. Diagnostics exposes the error.
             }
-          } catch (_error) {
-            // Fall back to registry prefs below. Diagnostics exposes the error.
-          }
-          return getRegistryCalendars();
+            return getRegistryCalendars();
+          });
         },
 
         diagnostics() {
-          let managerCalendars = [];
-          let managerError = "";
-          try {
-            managerCalendars = getCalendars().map(calendarSummary);
-          } catch (error) {
-            managerError = error.message;
-          }
-          return {
-            calModuleLoaded: !!getCal(),
-            calModuleError,
-            hasCalManager: !!getCal()?.manager,
-            hasGetCalendarManager: typeof getCal()?.getCalendarManager == "function",
-            managerError,
-            managerCalendars,
-            registryCalendars: getRegistryCalendars()
-          };
+          return wrapResult(() => {
+            let managerCalendars = [];
+            let managerError = "";
+            try {
+              managerCalendars = getCalendars().map(calendarSummary);
+            } catch (error) {
+              managerError = error.message;
+            }
+            return {
+              calModuleLoaded: !!getCal(),
+              calModuleError,
+              hasCalManager: !!getCal()?.manager,
+              hasGetCalendarManager: typeof getCal()?.getCalendarManager == "function",
+              managerError,
+              managerCalendars,
+              registryCalendars: getRegistryCalendars()
+            };
+          });
         },
 
-        async exportCalendar(calendarId) {
-          const calendar = getCalendar(calendarId);
-          if (!calendar) {
-            throw new Error(`Calendar not found: ${calendarId}`);
-          }
-          if (!isLocalStorageCalendar(calendar)) {
-            throw new Error(`Refusing to mirror non-local calendar: ${calendar.name}`);
-          }
-
-          const items = await getCalendarItems(calendar);
-          const events = [];
-          for (const item of items) {
-            if (!item.isEvent?.()) {
-              continue;
+        exportCalendar(calendarId) {
+          return wrapResult(async () => {
+            const calendar = getCalendar(calendarId);
+            if (!calendar) {
+              throw new Error(`Calendar not found: ${calendarId}`);
             }
-            const ics = serializeEvent(item);
-            const uid = itemUid(item);
-            if (!ics || !uid) {
-              continue;
+            if (!isLocalStorageCalendar(calendar)) {
+              throw new Error(`Refusing to mirror non-local calendar: ${calendar.name}`);
             }
-            events.push({
-              uid,
-              title: item.title || "",
-              lastModified: itemLastModified(item),
-              ics
-            });
-          }
 
-          return {
-            calendar: {
-              id: calendar.id,
-              name: calendar.name
-            },
-            exportedAt: new Date().toISOString(),
-            events
-          };
+            const items = await getCalendarItems(calendar);
+            const events = [];
+            for (const item of items) {
+              if (!item.isEvent?.()) {
+                continue;
+              }
+              const ics = serializeEvent(item);
+              const uid = itemUid(item);
+              if (!ics || !uid) {
+                continue;
+              }
+              events.push({
+                uid,
+                title: item.title || "",
+                lastModified: itemLastModified(item),
+                ics
+              });
+            }
+
+            return {
+              calendar: {
+                id: calendar.id,
+                name: calendar.name
+              },
+              exportedAt: new Date().toISOString(),
+              events
+            };
+          });
         }
       }
     };
