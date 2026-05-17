@@ -113,11 +113,14 @@ browser.alarms.onAlarm.addListener(async alarm => {
 });
 
 async function handleMessage(message) {
+  if (message?.type === "pingExperiment") {
+    return browser.CalDavSync.ping();
+  }
   if (message?.type === "listCalendars") {
-    return browser.localCalendarMirror.listCalendars();
+    return browser.CalDavSync.listCalendars();
   }
   if (message?.type === "calendarDiagnostics") {
-    return browser.localCalendarMirror.diagnostics();
+    return browser.CalDavSync.diagnostics();
   }
   if (message?.type === "getSettings") {
     return getSettings();

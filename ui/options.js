@@ -98,6 +98,10 @@ document.getElementById("refreshCalendars").addEventListener("click", () => {
   withBusy(document.getElementById("refreshCalendars"), () => refreshCalendars(fields.calendarId.value));
 });
 
+document.getElementById("pingExperiment").addEventListener("click", event => {
+  withBusy(event.currentTarget, () => send("pingExperiment"));
+});
+
 document.getElementById("diagnostics").addEventListener("click", event => {
   withBusy(event.currentTarget, () => send("calendarDiagnostics"));
 });

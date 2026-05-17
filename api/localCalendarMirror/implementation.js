@@ -168,14 +168,22 @@ function serializeEvent(item) {
   return stripSchedulingMethod(vcalendar.serializeToICS());
 }
 
-var localCalendarMirror = class extends ExtensionCommon.ExtensionAPI {
+var CalDavSync = class extends ExtensionCommon.ExtensionAPI {
   getAPI(context) {
     function wrapResult(callback) {
       return context.wrapPromise(Promise.resolve().then(callback));
     }
 
     return {
-      localCalendarMirror: {
+      CalDavSync: {
+        ping() {
+          return wrapResult(() => ({
+            ok: true,
+            namespace: "CalDavSync",
+            at: new Date().toISOString()
+          }));
+        },
+
         listCalendars() {
           return wrapResult(() => {
             try {

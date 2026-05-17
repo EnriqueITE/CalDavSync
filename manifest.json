@@ -2,7 +2,7 @@
   "manifest_version": 2,
   "name": "CalDavSync",
   "description": "Mirrors a local Thunderbird calendar to a private CalDAV collection without configuring the remote calendar in Thunderbird.",
-  "version": "0.2.4",
+  "version": "0.2.5",
   "author": "Codex",
   "browser_specific_settings": {
     "gecko": {
@@ -32,12 +32,13 @@
     "open_in_tab": true
   },
   "experiment_apis": {
-    "localCalendarMirror": {
+    "CalDavSync": {
       "schema": "api/localCalendarMirror/schema.json",
       "parent": {
         "scopes": ["addon_parent"],
-        "paths": [["localCalendarMirror"]],
-        "script": "api/localCalendarMirror/implementation.js"
+        "paths": [["CalDavSync"]],
+        "script": "api/localCalendarMirror/implementation.js",
+        "events": ["startup"]
       }
     }
   }

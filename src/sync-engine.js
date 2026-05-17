@@ -78,7 +78,7 @@ const MirrorSync = (() => {
       throw new Error("Configure a CalDAV collection URL before syncing.");
     }
 
-    const exportedCalendar = await browser.localCalendarMirror.exportCalendar(settings.calendarId);
+    const exportedCalendar = await browser.CalDavSync.exportCalendar(settings.calendarId);
     const localIndex = await buildLocalIndex(exportedCalendar);
     const state = await loadState();
     const actions = plannedActions(localIndex, state);
@@ -181,7 +181,7 @@ const MirrorSync = (() => {
   }
 
   async function exportBackup(calendarId) {
-    const exportedCalendar = await browser.localCalendarMirror.exportCalendar(calendarId);
+    const exportedCalendar = await browser.CalDavSync.exportCalendar(calendarId);
     const body = exportedCalendar.events
       .map(event => event.ics.replace(/^BEGIN:VCALENDAR\r?\n/i, "").replace(/\r?\nEND:VCALENDAR\r?\n?$/i, ""))
       .join("\r\n");

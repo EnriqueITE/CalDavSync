@@ -1,8 +1,15 @@
 [
   {
-    "namespace": "localCalendarMirror",
+    "namespace": "CalDavSync",
     "description": "Privileged Thunderbird calendar access for Local Calendar CalDAV Mirror.",
     "functions": [
+      {
+        "name": "ping",
+        "type": "function",
+        "async": true,
+        "description": "Return a minimal value to confirm the experiment API is loaded.",
+        "parameters": []
+      },
       {
         "name": "listCalendars",
         "type": "function",
