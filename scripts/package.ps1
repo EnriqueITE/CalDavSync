@@ -31,7 +31,9 @@ function Add-ZipEntry {
 
 Push-Location $root
 try {
-  Get-ChildItem -Path $root -Filter "CalDavSync-v*.xpi" | Remove-Item -Force
+  if (Test-Path $packagePath) {
+    Remove-Item $packagePath -Force
+  }
   if (Test-Path $zipPath) {
     Remove-Item $zipPath -Force
   }
