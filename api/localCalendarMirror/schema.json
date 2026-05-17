@@ -11,6 +11,13 @@
         "parameters": []
       },
       {
+        "name": "diagnostics",
+        "type": "function",
+        "async": true,
+        "description": "Return calendar access diagnostics for troubleshooting.",
+        "parameters": []
+      },
+      {
         "name": "exportCalendar",
         "type": "function",
         "async": true,

@@ -9,7 +9,18 @@ var { Services } = ChromeUtils.importESModule(
 var { cal } = ChromeUtils.importESModule("resource:///modules/calendar/calUtils.sys.mjs");
 
 function getCalendars() {
-  return cal.manager.getCalendars();
+  return getCalendarManager().getCalendars();
+}
+
+function getCalendarManager() {
+  if (cal.manager) {
+    return cal.manager;
+  }
+  if (typeof cal.getCalendarManager == "function") {
+    return cal.getCalendarManager();
+  }
+  return Components.classes["@mozilla.org/calendar/manager;1"]
+    .getService(Components.interfaces.calICalendarManager);
 }
 
 function getCalendar(calendarId) {
@@ -17,7 +28,53 @@ function getCalendar(calendarId) {
 }
 
 function isLocalStorageCalendar(calendar) {
-  return calendar.type === "storage" || String(calendar.uri?.spec || "").startsWith("moz-storage-calendar:");
+  const uri = String(calendar.uri?.spec || "");
+  return (
+    calendar.type === "storage" ||
+    calendar.type === "ics" ||
+    uri.startsWith("moz-storage-calendar:") ||
+    uri.startsWith("file:")
+  );
+}
+
+function getRegistryCalendars() {
+  const branch = "calendar.registry.";
+  const ids = new Set();
+  for (const key of Services.prefs.getChildList(branch)) {
+    const end = key.indexOf(".", branch.length);
+    if (end > branch.length) {
+      ids.add(key.slice(branch.length, end));
+    }
+  }
+
+  return Array.from(ids).map(id => {
+    const prefix = `${branch}${id}.`;
+    const type = Services.prefs.getStringPref(`${prefix}type`, "");
+    const uri = Services.prefs.getStringPref(`${prefix}uri`, "");
+    return {
+      id,
+      name: Services.prefs.getStringPref(`${prefix}name`, id),
+      type,
+      uri,
+      readOnly: Services.prefs.getBoolPref(`${prefix}readOnly`, false),
+      disabled: Services.prefs.getBoolPref(`${prefix}disabled`, false),
+      isLocal: type === "storage" || type === "ics" || uri.startsWith("moz-storage-calendar:") || uri.startsWith("file:"),
+      source: "registry"
+    };
+  });
+}
+
+function calendarSummary(calendar) {
+  return {
+    id: calendar.id,
+    name: calendar.name,
+    type: calendar.type,
+    uri: calendar.uri?.spec || "",
+    readOnly: !!calendar.readOnly,
+    disabled: !!calendar.getProperty("disabled"),
+    isLocal: isLocalStorageCalendar(calendar),
+    source: "manager"
+  };
 }
 
 function stripSchedulingMethod(ics) {
@@ -91,15 +148,28 @@ var localCalendarMirror = class extends ExtensionCommon.ExtensionAPI {
     return {
       localCalendarMirror: {
         async listCalendars() {
-          return getCalendars().map(calendar => ({
-            id: calendar.id,
-            name: calendar.name,
-            type: calendar.type,
-            uri: calendar.uri?.spec || "",
-            readOnly: !!calendar.readOnly,
-            disabled: !!calendar.getProperty("disabled"),
-            isLocal: isLocalStorageCalendar(calendar)
-          }));
+          const calendars = getCalendars().map(calendarSummary);
+          if (calendars.length) {
+            return calendars;
+          }
+          return getRegistryCalendars();
+        },
+
+        async diagnostics() {
+          let managerCalendars = [];
+          let managerError = "";
+          try {
+            managerCalendars = getCalendars().map(calendarSummary);
+          } catch (error) {
+            managerError = error.message;
+          }
+          return {
+            hasCalManager: !!cal.manager,
+            hasGetCalendarManager: typeof cal.getCalendarManager == "function",
+            managerError,
+            managerCalendars,
+            registryCalendars: getRegistryCalendars()
+          };
         },
 
         async exportCalendar(calendarId) {

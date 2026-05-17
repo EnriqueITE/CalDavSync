@@ -116,6 +116,9 @@ browser.runtime.onMessage.addListener((message) => {
   if (message?.type === "listCalendars") {
     return browser.localCalendarMirror.listCalendars();
   }
+  if (message?.type === "calendarDiagnostics") {
+    return browser.localCalendarMirror.diagnostics();
+  }
   if (message?.type === "getSettings") {
     return getSettings();
   }

@@ -50,10 +50,17 @@ async function send(type, payload = {}) {
 async function refreshCalendars(selectedId = "") {
   const calendars = await send("listCalendars");
   fields.calendarId.textContent = "";
+  if (!calendars.length) {
+    const option = document.createElement("option");
+    option.value = "";
+    option.textContent = "No calendars found";
+    fields.calendarId.append(option);
+    return;
+  }
   for (const calendar of calendars) {
     const option = document.createElement("option");
     option.value = calendar.id;
-    option.textContent = `${calendar.name} (${calendar.type}${calendar.isLocal ? ", local" : ""})`;
+    option.textContent = `${calendar.name} (${calendar.type || "unknown"}${calendar.isLocal ? ", local" : ""}${calendar.source ? `, ${calendar.source}` : ""})`;
     option.disabled = !calendar.isLocal;
     fields.calendarId.append(option);
   }
@@ -84,6 +91,10 @@ async function withBusy(button, action) {
 
 document.getElementById("refreshCalendars").addEventListener("click", () => {
   withBusy(document.getElementById("refreshCalendars"), () => refreshCalendars(fields.calendarId.value));
+});
+
+document.getElementById("diagnostics").addEventListener("click", event => {
+  withBusy(event.currentTarget, () => send("calendarDiagnostics"));
 });
 
 document.getElementById("save").addEventListener("click", event => {
@@ -149,9 +160,24 @@ document.getElementById("resetState").addEventListener("click", event => {
 });
 
 document.addEventListener("DOMContentLoaded", async () => {
-  const settings = await send("getSettings");
-  await refreshCalendars(settings.calendarId);
-  writeSettings(settings);
-  await refreshLogs();
-  setStatus("Ready.");
+  const fallbackSettings = {
+    calendarId: "",
+    collectionUrl: "",
+    username: "",
+    intervalMinutes: 15,
+    deleteLimitPercent: 30,
+    enabled: false,
+    hasSavedPassword: false
+  };
+  writeSettings(fallbackSettings);
+
+  try {
+    const settings = await send("getSettings");
+    writeSettings(settings);
+    await refreshCalendars(settings.calendarId);
+    await refreshLogs();
+    setStatus("Ready.");
+  } catch (error) {
+    setStatus(`Initialization failed: ${error.message}`);
+  }
 });

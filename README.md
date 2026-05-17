@@ -62,6 +62,7 @@ and may not install permanently as unsigned packages.
 8. Click Sync now.
 
 Use a dedicated, preferably empty CalDAV collection for the first test.
+If no local calendars appear, click Diagnostics and copy the Status output.
 
 ## Behavior
 
