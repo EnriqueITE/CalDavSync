@@ -2,7 +2,7 @@
   "manifest_version": 2,
   "name": "CalDavSync",
   "description": "Mirrors a local Thunderbird calendar to a private CalDAV collection without configuring the remote calendar in Thunderbird.",
-  "version": "0.2.6",
+  "version": "0.2.7",
   "author": "Codex",
   "browser_specific_settings": {
     "gecko": {
@@ -29,7 +29,7 @@
   },
   "options_ui": {
     "page": "ui/options.html",
-    "open_in_tab": true
+    "browser_style": true
   },
   "experiment_apis": {
     "CalDavSync": {
