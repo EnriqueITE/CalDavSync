@@ -24,6 +24,19 @@ It includes:
 - manual ICS backup download;
 - automatic periodic sync via Thunderbird alarms.
 
+## Install for local testing
+
+Because CalDavSync uses a Thunderbird Experiment API, the most reliable local
+test path is Thunderbird's temporary add-on loader:
+
+1. Open Thunderbird.
+2. Go to Add-ons and Themes.
+3. Open the gear menu and choose Debug Add-ons.
+4. Choose Load Temporary Add-on.
+5. Select this directory's `manifest.json`.
+
+Temporary add-ons are removed when Thunderbird restarts.
+
 ## Install private XPI
 
 1. Open Thunderbird.
@@ -31,8 +44,10 @@ It includes:
 3. Open the gear menu and choose Install Add-on From File.
 4. Select the generated `CalDavSync-vX.Y.Z.xpi`.
 
-For development, use Debug Add-ons and load this directory's `manifest.json`
-as a temporary add-on.
+If Thunderbird reports that the XPI is corrupt or cannot be verified, install it
+through Debug Add-ons while developing, or submit/sign the XPI as an unlisted
+Thunderbird add-on before permanent installation. Experiment APIs are privileged
+and may not install permanently as unsigned packages.
 
 ## Configure
 
@@ -78,4 +93,4 @@ Create a private XPI package:
 ```
 
 The script validates JSON and JavaScript syntax, then creates
-`CalDavSync-vX.Y.Z.xpi`.
+`CalDavSync-vX.Y.Z.xpi` with ZIP entries using `/` path separators.
