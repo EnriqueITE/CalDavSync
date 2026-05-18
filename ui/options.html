@@ -1,79 +1,253 @@
 <!doctype html>
-<html>
+<html lang="en">
   <head>
     <meta charset="utf-8">
-    <title>CalDavSync</title>
+    <title>CalDavSync — Settings</title>
     <link rel="stylesheet" href="options.css">
   </head>
   <body>
-    <main>
-      <h1>CalDavSync</h1>
 
-      <section>
-        <label>
-          Local calendar
-          <select id="calendarId"></select>
-        </label>
-        <button id="refreshCalendars" type="button">Refresh</button>
-        <button id="pingExperiment" type="button">Ping API</button>
-        <button id="diagnostics" type="button">Diagnostics</button>
-      </section>
+    <!-- First-run disclaimer modal -->
+    <div id="disclaimerOverlay" class="disclaimer-overlay" hidden>
+      <div class="disclaimer-modal" role="dialog" aria-modal="true" aria-labelledby="disclaimerTitle">
+        <div class="disclaimer-header">
+          <span class="disclaimer-icon">📅</span>
+          <div>
+            <h1 id="disclaimerTitle" class="disclaimer-title">Welcome to CalDavSync</h1>
+            <p class="disclaimer-sub">by Enrique Serrano Aparicio</p>
+          </div>
+        </div>
 
-      <section>
-        <label>
-          CalDAV collection URL
-          <input id="collectionUrl" type="url" placeholder="https://example.com/dav/calendars/user/mirror/">
-        </label>
-        <label>
-          Username
-          <input id="username" autocomplete="username">
-        </label>
-        <label>
-          Password
-          <input id="password" type="password" autocomplete="current-password" placeholder="Leave blank to keep saved password">
-        </label>
-        <p id="passwordStatus" class="muted"></p>
-        <button id="clearCredentials" type="button">Clear saved password</button>
-      </section>
+        <div class="disclaimer-body">
+          <p class="disclaimer-intro">
+            CalDavSync mirrors your local Thunderbird calendar to a private CalDAV server.
+            Please read the following before using it.
+          </p>
 
-      <section class="grid">
-        <label>
-          Sync interval minutes
-          <input id="intervalMinutes" type="number" min="1" step="1">
-        </label>
-        <label>
-          Delete guard percent
-          <input id="deleteLimitPercent" type="number" min="1" max="100" step="1">
-        </label>
-      </section>
+          <div class="disclaimer-section">
+            <h2 class="disclaimer-section-title">How it works</h2>
+            <ul class="disclaimer-list">
+              <li>Events are <strong>pushed from Thunderbird to your CalDAV server</strong>. Sync is one-directional — changes on the server are not pulled back.</li>
+              <li>Deleting an event in Thunderbird will delete it on the server on the next sync.</li>
+              <li>A configurable <em>Delete guard</em> blocks sync if more than a set percentage of your events would be deleted at once — protecting you from accidental bulk wipes. You can adjust the threshold in settings or bypass it entirely with <em>Force sync</em>.</li>
+              <li>Your credentials are stored securely in <strong>Thunderbird's native Password Manager</strong>.</li>
+            </ul>
+          </div>
 
-      <section>
-        <label class="inline">
-          <input id="enabled" type="checkbox">
-          Run automatic sync
-        </label>
-      </section>
+          <div class="disclaimer-section disclaimer-section--warning">
+            <h2 class="disclaimer-section-title">⚠️ Disclaimer</h2>
+            <p>
+              This extension is provided <strong>as-is</strong>, without warranty of any kind, express or
+              implied. The author, <strong>Enrique Serrano Aparicio</strong>, shall not be held liable for any
+              data loss, corruption, or unintended modification of calendar data on your server or
+              in Thunderbird that may result from the use of this software.
+            </p>
+            <p style="margin-top: 10px;">
+              By using CalDavSync you acknowledge that you have read this notice, that you understand
+              its one-directional sync behaviour, and that you accept full responsibility for any
+              consequences arising from its use.
+            </p>
+          </div>
+        </div>
 
-      <section class="actions">
-        <button id="save" type="button">Save</button>
-        <button id="validate" type="button">Validate CalDAV</button>
-        <button id="backup" type="button">Download ICS backup</button>
-        <button id="dryRun" type="button">Dry run</button>
-        <button id="syncNow" type="button">Sync now</button>
-        <button id="syncForce" type="button">Sync now, force deletes</button>
-        <button id="resetState" type="button">Reset mirror state</button>
-      </section>
+        <div class="disclaimer-footer">
+          <a href="https://buymeacoffee.com/enriqueite" target="_blank" rel="noopener" class="bmc-link bmc-link--modal">☕ Support this project</a>
+          <button id="disclaimerAccept" type="button" class="btn btn-primary">I understand, let me in</button>
+        </div>
+      </div>
+    </div>
 
-      <section>
-        <h2>Status</h2>
-        <pre id="status"></pre>
-      </section>
+    <div class="layout">
 
-      <section>
-        <h2>Log</h2>
-        <pre id="logs"></pre>
-      </section>
-    </main>
+      <!-- Sidebar nav -->
+      <nav class="sidebar">
+        <div class="sidebar-brand">
+          <div class="brand-icon">📅</div>
+          <div>
+            <div class="brand-name">CalDavSync</div>
+            <div class="brand-sub">Calendar Mirror</div>
+          </div>
+        </div>
+        <ul class="nav-links">
+          <li><a href="#section-connection" class="nav-link active">Connection</a></li>
+          <li><a href="#section-schedule" class="nav-link">Schedule</a></li>
+          <li><a href="#section-actions" class="nav-link">Sync Actions</a></li>
+          <li><a href="#section-log" class="nav-link">Activity Log</a></li>
+        </ul>
+        <div class="sidebar-footer">
+          <span id="syncStatus" class="sync-badge sync-idle">● Idle</span>
+          <div class="sidebar-author">
+            <span class="author-name">by Enrique Serrano</span>
+            <a href="https://buymeacoffee.com/enriqueite" target="_blank" rel="noopener" class="bmc-link" title="Buy me a coffee ☕">
+              ☕ Support this project
+            </a>
+          </div>
+        </div>
+      </nav>
+
+      <!-- Main content -->
+      <main class="content">
+
+        <!-- Connection -->
+        <section class="card" id="section-connection">
+          <div class="card-header">
+            <div>
+              <h2 class="card-title">Connection</h2>
+              <p class="card-desc">Choose your local calendar and configure the remote CalDAV endpoint.</p>
+            </div>
+          </div>
+
+          <div class="form-grid">
+            <div class="field-group">
+              <label class="field-label" for="calendarId">Local calendar</label>
+              <div class="input-row">
+                <select id="calendarId" class="field-input"></select>
+                <button id="refreshCalendars" type="button" class="btn btn-ghost btn-icon" title="Refresh calendars">↺</button>
+              </div>
+            </div>
+
+            <div class="field-group">
+              <label class="field-label" for="collectionUrl">CalDAV collection URL</label>
+              <input id="collectionUrl" type="url" class="field-input"
+                placeholder="https://example.com/dav/calendars/user/mirror/">
+            </div>
+          </div>
+
+          <div class="form-grid">
+            <div class="field-group">
+              <label class="field-label" for="username">Username</label>
+              <input id="username" class="field-input" autocomplete="username">
+            </div>
+            <div class="field-group">
+              <label class="field-label" for="password">Password</label>
+              <input id="password" type="password" class="field-input"
+                autocomplete="current-password" placeholder="Leave blank to keep saved password">
+            </div>
+          </div>
+
+          <div class="credentials-bar">
+            <p id="passwordStatus" class="password-status"></p>
+            <div class="btn-group">
+              <button id="clearCredentials" type="button" class="btn btn-ghost btn-danger">Clear password</button>
+              <button id="validate" type="button" class="btn btn-ghost">Test connection</button>
+              <button id="save" type="button" class="btn btn-primary">Save settings</button>
+            </div>
+          </div>
+        </section>
+
+        <!-- Schedule -->
+        <section class="card" id="section-schedule">
+          <div class="card-header">
+            <div>
+              <h2 class="card-title">Schedule &amp; Safety</h2>
+              <p class="card-desc">Control how often the mirror runs and protect against bulk deletes.</p>
+            </div>
+          </div>
+
+          <div class="form-grid">
+            <div class="field-group">
+              <label class="field-label" for="intervalMinutes">Sync interval (minutes)</label>
+              <input id="intervalMinutes" type="number" min="1" step="1" class="field-input">
+            </div>
+            <div class="field-group">
+              <label class="field-label" for="deleteLimitPercent">
+                Delete guard (%)
+                <span class="field-hint">Refuse sync if more than this % of events would be deleted</span>
+              </label>
+              <input id="deleteLimitPercent" type="number" min="1" max="100" step="1" class="field-input">
+            </div>
+          </div>
+
+          <div class="form-grid">
+            <div class="field-group">
+              <label class="field-label" for="syncPastMonths">
+                Sync past months
+                <span class="field-hint">0 = sync all past events</span>
+              </label>
+              <input id="syncPastMonths" type="number" min="0" step="1" class="field-input" placeholder="0">
+            </div>
+            <div class="field-group">
+              <label class="field-label" for="syncFutureMonths">
+                Sync future months
+                <span class="field-hint">0 = sync all future events</span>
+              </label>
+              <input id="syncFutureMonths" type="number" min="0" step="1" class="field-input" placeholder="0">
+            </div>
+          </div>
+
+          <div class="toggle-row">
+            <label class="toggle-label" for="enabled">
+              <input id="enabled" type="checkbox" class="toggle-input">
+              <span class="toggle-track"></span>
+              <span class="toggle-text">Enable automatic sync</span>
+            </label>
+          </div>
+        </section>
+
+        <!-- Sync actions -->
+        <section class="card" id="section-actions">
+          <div class="card-header">
+            <div>
+              <h2 class="card-title">Sync Actions</h2>
+              <p class="card-desc">Manual controls for synchronisation and maintenance.</p>
+            </div>
+          </div>
+
+          <div class="action-grid">
+            <button id="dryRun" type="button" class="action-btn">
+              <span class="action-icon">🔍</span>
+              <span class="action-label">Dry run</span>
+              <span class="action-desc">Preview changes without applying them</span>
+            </button>
+            <button id="syncNow" type="button" class="action-btn">
+              <span class="action-icon">🔄</span>
+              <span class="action-label">Sync now</span>
+              <span class="action-desc">Run a full sync respecting the delete guard</span>
+            </button>
+            <button id="syncForce" type="button" class="action-btn action-btn--warning">
+              <span class="action-icon">⚠️</span>
+              <span class="action-label">Force sync</span>
+              <span class="action-desc">Sync and bypass the delete guard limit</span>
+            </button>
+            <button id="backup" type="button" class="action-btn">
+              <span class="action-icon">💾</span>
+              <span class="action-label">Download backup</span>
+              <span class="action-desc">Export local calendar as .ics file</span>
+            </button>
+            <button id="resetState" type="button" class="action-btn action-btn--danger">
+              <span class="action-icon">🗑️</span>
+              <span class="action-label">Reset mirror state</span>
+              <span class="action-desc">Clear sync memory — next run re-uploads everything</span>
+            </button>
+          </div>
+
+          <!-- Status panel -->
+          <div class="status-panel">
+            <div class="status-panel-header">
+              <span class="status-panel-title">Last result</span>
+              <div class="dev-btns">
+                <button id="pingExperiment" type="button" class="btn btn-ghost btn-xs">Ping API</button>
+                <button id="diagnostics" type="button" class="btn btn-ghost btn-xs">Diagnostics</button>
+              </div>
+            </div>
+            <pre id="status" class="output-box"></pre>
+          </div>
+        </section>
+
+        <!-- Activity log -->
+        <section class="card" id="section-log">
+          <div class="card-header">
+            <div>
+              <h2 class="card-title">Activity Log</h2>
+              <p class="card-desc">Recent extension events and sync history.</p>
+            </div>
+          </div>
+          <pre id="logs" class="output-box output-box--tall"></pre>
+        </section>
+
+      </main>
+    </div>
+
     <script src="options.js"></script>
   </body>
 </html>

@@ -1,6 +1,9 @@
 "use strict";
 
-const output = document.getElementById("output");
+const statusText = document.getElementById("statusText");
+const statusDetails = document.getElementById("statusDetails");
+const syncBtn = document.getElementById("syncNow");
+const optionsBtn = document.getElementById("options");
 
 async function send(type, payload = {}) {
   const response = await browser.runtime.sendMessage({ type, ...payload });
@@ -10,26 +13,70 @@ async function send(type, payload = {}) {
   return response.value;
 }
 
-function show(value) {
-  output.textContent = typeof value === "string" ? value : JSON.stringify(value, null, 2);
+function timeAgo(isoString) {
+  const diffMs = Date.now() - new Date(isoString).getTime();
+  const diffMin = Math.floor(diffMs / 60000);
+  if (diffMin < 1) return "just now";
+  if (diffMin < 60) return `${diffMin}m ago`;
+  const diffH = Math.floor(diffMin / 60);
+  if (diffH < 24) return `${diffH}h ago`;
+  return `${Math.floor(diffH / 24)}d ago`;
 }
 
-document.getElementById("dryRun").addEventListener("click", async () => {
+async function refreshStatus() {
   try {
-    show(await send("dryRun"));
+    const status = await send("getSyncStatus");
+    if (!status) {
+      statusText.textContent = "● Never synced";
+      statusText.className = "status-text status-idle";
+      statusDetails.textContent = "No sync history found.";
+    } else if (status.ok) {
+      statusText.textContent = `✓ Synced ${timeAgo(status.at)}`;
+      statusText.className = "status-text status-ok";
+      statusDetails.textContent = `+${status.create} ↻${status.update} -${status.delete}`;
+    } else {
+      statusText.textContent = `✗ Failed ${timeAgo(status.at)}`;
+      statusText.className = "status-text status-err";
+      statusDetails.textContent = `${status.errorCount} error(s). Check options.`;
+    }
   } catch (error) {
-    show(error.message);
+    statusText.textContent = "● Background script error";
+    statusText.className = "status-text status-idle";
+    statusDetails.textContent = error.message;
+  }
+}
+
+// Listen for live progress
+browser.runtime.onMessage.addListener(msg => {
+  if (msg?.type === "_syncProgress") {
+    statusText.textContent = "⏳ Syncing...";
+    statusText.className = "status-text status-idle";
+    statusDetails.textContent = msg.message;
   }
 });
 
-document.getElementById("syncNow").addEventListener("click", async () => {
+syncBtn.addEventListener("click", async () => {
+  syncBtn.disabled = true;
+  statusText.textContent = "⏳ Starting sync...";
+  statusText.className = "status-text status-idle";
+  statusDetails.textContent = "Please wait";
   try {
-    show(await send("syncNow"));
+    await send("syncNow");
   } catch (error) {
-    show(error.message);
+    // Errors are already handled by background.js appending logs,
+    // but we refresh to show the failed state.
+  } finally {
+    syncBtn.disabled = false;
+    await refreshStatus();
   }
 });
 
-document.getElementById("options").addEventListener("click", () => {
+optionsBtn.addEventListener("click", () => {
   browser.runtime.openOptionsPage();
+  window.close();
+});
+
+document.addEventListener("DOMContentLoaded", () => {
+  refreshStatus();
+  setInterval(refreshStatus, 30_000);
 });

@@ -18,7 +18,7 @@ Add-Type -AssemblyName System.IO.Compression.FileSystem
 $zipStream = [System.IO.File]::Create($xpiPath)
 $zip = New-Object System.IO.Compression.ZipArchive($zipStream, [System.IO.Compression.ZipArchiveMode]::Create)
 
-$dirs = @("src", "ui", "api")
+$dirs = @("src", "ui", "api", "icons")
 $rootFiles = @("manifest.json")
 
 foreach ($dir in $dirs) {

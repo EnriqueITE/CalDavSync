@@ -5,31 +5,99 @@
     <title>CalDavSync</title>
     <style>
       body {
-        font: 13px system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        font: 13px/1.4 system-ui, -apple-system, sans-serif;
         margin: 0;
         min-width: 260px;
+        padding: 16px;
+        background: #0f1117;
+        color: #e2e6f0;
+      }
+      .header {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        margin-bottom: 12px;
+        padding-bottom: 12px;
+        border-bottom: 1px solid #2a2d3a;
+      }
+      .logo {
+        width: 24px;
+        height: 24px;
+      }
+      .title {
+        font-weight: 600;
+        font-size: 14px;
+        margin: 0;
+      }
+      .status-panel {
+        background: #1a1d27;
+        border: 1px solid #2a2d3a;
+        border-radius: 6px;
         padding: 12px;
+        margin-bottom: 12px;
+      }
+      .status-text {
+        font-size: 12px;
+        font-weight: 500;
+        margin: 0 0 4px;
+      }
+      .status-ok { color: #22c55e; }
+      .status-err { color: #ef4444; }
+      .status-idle { color: #8891aa; }
+      .status-details {
+        font-size: 11px;
+        color: #8891aa;
+        margin: 0;
+      }
+      .actions {
+        display: flex;
+        gap: 8px;
       }
       button {
-        margin: 0 6px 8px 0;
-        padding: 6px 10px;
+        background: #4f6ef7;
+        border: 1px solid #4f6ef7;
+        color: #fff;
+        border-radius: 4px;
+        padding: 6px 12px;
+        font: inherit;
+        font-size: 12px;
+        font-weight: 500;
+        cursor: pointer;
+        flex: 1;
       }
-      pre {
-        background: #f4f6f8;
-        border: 1px solid #d8dee8;
-        margin: 0;
-        max-height: 260px;
-        overflow: auto;
-        padding: 8px;
-        white-space: pre-wrap;
+      button:hover {
+        background: #6b84ff;
+      }
+      button.btn-ghost {
+        background: transparent;
+        border-color: #353848;
+        color: #e2e6f0;
+      }
+      button.btn-ghost:hover {
+        background: #20232f;
+      }
+      button:disabled {
+        opacity: 0.5;
+        cursor: wait;
       }
     </style>
   </head>
   <body>
-    <button id="dryRun" type="button">Dry run</button>
-    <button id="syncNow" type="button">Sync</button>
-    <button id="options" type="button">Options</button>
-    <pre id="output">Ready.</pre>
+    <div class="header">
+      <img src="../icons/icon-32.png" alt="" class="logo">
+      <h1 class="title">CalDavSync</h1>
+    </div>
+
+    <div class="status-panel">
+      <p id="statusText" class="status-text status-idle">Checking status...</p>
+      <p id="statusDetails" class="status-details">Please wait</p>
+    </div>
+
+    <div class="actions">
+      <button id="syncNow" type="button">Sync Now</button>
+      <button id="options" type="button" class="btn-ghost">Options</button>
+    </div>
+
     <script src="popup.js"></script>
   </body>
 </html>

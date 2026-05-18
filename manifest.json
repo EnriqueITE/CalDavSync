@@ -2,16 +2,24 @@
   "manifest_version": 2,
   "name": "CalDavSync",
   "description": "Mirrors a local Thunderbird calendar to a private CalDAV collection without configuring the remote calendar in Thunderbird.",
-  "version": "0.2.9",
-  "author": "Codex",
+  "version": "0.5.2",
+  "author": "Enrique Serrano Aparicio",
+  "icons": {
+    "16":  "icons/icon-16.png",
+    "32":  "icons/icon-32.png",
+    "48":  "icons/icon-48.png",
+    "64":  "icons/icon-64.png",
+    "128": "icons/icon-128.png"
+  },
   "browser_specific_settings": {
     "gecko": {
-      "id": "caldavsync@example.invalid",
+      "id": "caldavsync@enriqueserrano.dev",
       "strict_min_version": "128.0"
     }
   },
   "permissions": [
     "alarms",
+    "notifications",
     "storage",
     "<all_urls>"
   ],
@@ -25,7 +33,12 @@
   },
   "browser_action": {
     "default_title": "CalDavSync",
-    "default_popup": "ui/popup.html"
+    "default_popup": "ui/popup.html",
+    "default_icon": {
+      "16":  "icons/icon-16.png",
+      "32":  "icons/icon-32.png",
+      "48":  "icons/icon-48.png"
+    }
   },
   "options_ui": {
     "page": "ui/options.html",

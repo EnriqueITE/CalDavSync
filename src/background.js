@@ -6,9 +6,13 @@ const DEFAULT_SETTINGS = {
   username: "",
   deleteLimitPercent: 30,
   intervalMinutes: 15,
+  syncPastMonths: 0,
+  syncFutureMonths: 0,
   enabled: false
 };
 
+// ── Password is NEVER stored in settings/storage.local ────────────────
+// sanitizeSettings strips it before any write to storage.
 function sanitizeSettings(settings) {
   const sanitized = { ...settings };
   delete sanitized.password;
@@ -20,18 +24,18 @@ async function getSettings() {
   return {
     ...DEFAULT_SETTINGS,
     ...sanitizeSettings(settings || {}),
-    hasSavedPassword: await Secrets.hasPassword()
+    hasSavedPassword: await Secrets.hasPassword(settings?.username)
   };
 }
 
 async function setSettings(settings) {
   if (settings.password) {
-    await Secrets.savePassword(settings.password);
+    await Secrets.savePassword(settings.username, settings.password);
   }
   await browser.storage.local.set({
     settings: {
       ...DEFAULT_SETTINGS,
-      ...sanitizeSettings(settings)
+      ...sanitizeSettings(settings)  // password stripped here
     }
   });
   await configureAlarm();
@@ -40,10 +44,12 @@ async function setSettings(settings) {
 
 async function settingsWithPassword(settings = null) {
   const safeSettings = settings ? { ...DEFAULT_SETTINGS, ...sanitizeSettings(settings) } : await getSettings();
-  const password = settings?.password || await Secrets.loadPassword();
+  // Password always fetched fresh from native Password Manager, never from storage
+  const password = settings?.password || await Secrets.loadPassword(safeSettings.username);
   return { ...safeSettings, password };
 }
 
+// ── Redact sensitive data from logs ──────────────────────────────────
 function redactDetail(detail) {
   if (!detail || typeof detail !== "object") {
     return detail;
@@ -77,6 +83,30 @@ async function appendLog(level, message, detail = null) {
   await browser.storage.local.set({ logs: logs.slice(0, 200) });
 }
 
+// ── Sync status: last sync timestamp & result ─────────────────────────
+async function setSyncStatus(status) {
+  await browser.storage.local.set({ syncStatus: status });
+}
+
+async function getSyncStatus() {
+  const { syncStatus = null } = await browser.storage.local.get("syncStatus");
+  return syncStatus;
+}
+
+// ── Notifications ─────────────────────────────────────────────────────
+async function notifyError(message) {
+  try {
+    await browser.notifications.create("caldavsync-error", {
+      type: "basic",
+      title: "CalDavSync — Sync failed",
+      message
+    });
+  } catch (_) {
+    // Notifications not available in all environments
+  }
+}
+
+// ── Alarm / schedule ──────────────────────────────────────────────────
 async function configureAlarm() {
   const settings = await getSettings();
   await browser.alarms.clear("mirror-sync");
@@ -87,14 +117,53 @@ async function configureAlarm() {
   }
 }
 
+// ── #6 Retry with exponential backoff ────────────────────────────────
+async function withRetry(fn, maxAttempts = 3, baseDelayMs = 1500) {
+  let lastError;
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    try {
+      return await fn();
+    } catch (err) {
+      lastError = err;
+      // Don't retry on clear client errors (auth, not-found, bad request)
+      if (/HTTP 4\d\d/.test(err.message) && !/HTTP 408|HTTP 429/.test(err.message)) {
+        throw err;
+      }
+      if (attempt < maxAttempts) {
+        await new Promise(r => setTimeout(r, baseDelayMs * 2 ** (attempt - 1)));
+      }
+    }
+  }
+  throw lastError;
+}
+
+// ── Core sync runner (#5 progress via status broadcast) ───────────────
 async function runSync(options = {}) {
   const settings = await settingsWithPassword();
-  const summary = await MirrorSync.run(settings, options);
+
+  // Broadcast progress updates to the options page if it's open
+  function broadcastProgress(msg) {
+    browser.runtime.sendMessage({ type: "_syncProgress", message: msg }).catch(() => {});
+  }
+
+  const summary = await MirrorSync.run(settings, { ...options, onProgress: broadcastProgress });
+  const hasErrors = summary.errors.length > 0;
+  const label = summary.dryRun ? "Dry run" : "Sync";
   await appendLog(
-    summary.errors.length ? "error" : "info",
-    `${summary.dryRun ? "Dry run" : "Sync"}: ${summary.create} created, ${summary.update} updated, ${summary.delete} deleted`,
+    hasErrors ? "error" : "info",
+    `${label}: ${summary.create} created, ${summary.update} updated, ${summary.delete} deleted`,
     summary
   );
+  if (!summary.dryRun) {
+    await setSyncStatus({
+      at: new Date().toISOString(),
+      ok: !hasErrors,
+      create: summary.create,
+      update: summary.update,
+      delete: summary.delete,
+      errorCount: summary.errors.length
+    });
+  }
   return summary;
 }
 
@@ -106,12 +175,48 @@ browser.alarms.onAlarm.addListener(async alarm => {
     return;
   }
   try {
-    await runSync();
+    const summary = await runSync();
+    if (summary.errors.length > 0) {
+      await notifyError(
+        `${summary.errors.length} event(s) failed to sync. Open CalDavSync settings for details.`
+      );
+    }
   } catch (error) {
     await appendLog("error", error.message);
+    await setSyncStatus({ at: new Date().toISOString(), ok: false, errorCount: 1 });
+    await notifyError(`Sync failed: ${error.message}`);
   }
 });
 
+// ── #4 Reactive sync — debounced on calendar item changes ─────────────
+let _reactiveDebounceTimer = null;
+const REACTIVE_DEBOUNCE_MS = 30_000; // 30 s cooldown after last change
+
+async function scheduleReactiveSync() {
+  if (_reactiveDebounceTimer) {
+    clearTimeout(_reactiveDebounceTimer);
+  }
+  _reactiveDebounceTimer = setTimeout(async () => {
+    _reactiveDebounceTimer = null;
+    try {
+      const settings = await getSettings();
+      if (!settings.enabled || !settings.calendarId) return;
+      await runSync();
+    } catch (error) {
+      await appendLog("error", `Reactive sync failed: ${error.message}`);
+    }
+  }, REACTIVE_DEBOUNCE_MS);
+}
+
+// Listen for calendar item mutations via the experiment API
+// (registered after the extension API is available)
+browser.runtime.onMessage.addListener(msg => {
+  if (msg?.type === "_calendarItemChanged") {
+    scheduleReactiveSync();
+  }
+});
+
+// ── Message handler ───────────────────────────────────────────────────
 async function handleMessage(message) {
   if (message?.type === "pingExperiment") {
     return browser.CalDavSync.ping();
@@ -142,7 +247,8 @@ async function handleMessage(message) {
     return MirrorSync.resetState();
   }
   if (message?.type === "clearCredentials") {
-    await Secrets.clearPassword();
+    const currentSettings = await getSettings();
+    await Secrets.clearPassword(currentSettings.username);
     return getSettings();
   }
   if (message?.type === "exportBackup") {
@@ -150,6 +256,9 @@ async function handleMessage(message) {
   }
   if (message?.type === "getLogs") {
     return browser.storage.local.get({ logs: [] }).then(result => result.logs);
+  }
+  if (message?.type === "getSyncStatus") {
+    return getSyncStatus();
   }
   throw new Error(`Unknown message type: ${message?.type || "missing"}`);
 }

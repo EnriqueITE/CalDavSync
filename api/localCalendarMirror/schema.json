@@ -33,7 +33,54 @@
           {
             "name": "calendarId",
             "type": "string"
+          },
+          {
+            "name": "syncPastMonths",
+            "type": "integer",
+            "optional": true
+          },
+          {
+            "name": "syncFutureMonths",
+            "type": "integer",
+            "optional": true
           }
+        ]
+      },
+      {
+        "name": "savePassword",
+        "type": "function",
+        "async": true,
+        "description": "Save a password to Thunderbird's password manager.",
+        "parameters": [
+          { "name": "username", "type": "string" },
+          { "name": "password", "type": "string" }
+        ]
+      },
+      {
+        "name": "loadPassword",
+        "type": "function",
+        "async": true,
+        "description": "Load a password from Thunderbird's password manager.",
+        "parameters": [
+          { "name": "username", "type": "string" }
+        ]
+      },
+      {
+        "name": "hasPassword",
+        "type": "function",
+        "async": true,
+        "description": "Check if a password exists in Thunderbird's password manager.",
+        "parameters": [
+          { "name": "username", "type": "string" }
+        ]
+      },
+      {
+        "name": "clearPassword",
+        "type": "function",
+        "async": true,
+        "description": "Remove a password from Thunderbird's password manager.",
+        "parameters": [
+          { "name": "username", "type": "string" }
         ]
       }
     ]

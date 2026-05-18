@@ -78,7 +78,14 @@ const MirrorSync = (() => {
       throw new Error("Configure a CalDAV collection URL before syncing.");
     }
 
-    const exportedCalendar = await browser.CalDavSync.exportCalendar(settings.calendarId);
+    const onProgress = typeof options.onProgress === "function" ? options.onProgress : () => {};
+
+    onProgress("Exporting local calendar…");
+    const exportedCalendar = await browser.CalDavSync.exportCalendar(
+      settings.calendarId,
+      settings.syncPastMonths,
+      settings.syncFutureMonths
+    );
     const localIndex = await buildLocalIndex(exportedCalendar);
     const state = await loadState();
     const actions = plannedActions(localIndex, state);
@@ -106,7 +113,12 @@ const MirrorSync = (() => {
       return summary;
     }
 
+    const total = actions.length;
+    let done = 0;
+
     for (const action of actions) {
+      done++;
+      onProgress(`${action.type === "create" ? "↑" : action.type === "update" ? "↻" : "✕"} ${action.event?.title || action.uid} (${done}/${total})`);
       try {
         if (action.type === "create") {
           let remote;
@@ -172,7 +184,9 @@ const MirrorSync = (() => {
       }
     }
 
+    onProgress(`Saving state…`);
     await saveState(state);
+    onProgress(`Done. ${summary.create} created, ${summary.update} updated, ${summary.delete} deleted.`);
     return summary;
   }
 

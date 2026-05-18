@@ -93,14 +93,7 @@ function getRegistryCalendars() {
   });
 }
 
-function getIcsService() {
-  const cal = getCal();
-  if (cal?.getIcsService) {
-    return cal.getIcsService();
-  }
-  return Components.classes["@mozilla.org/calendar/ics-service;1"]
-    .getService(Components.interfaces.calIIcsService);
-}
+// getIcsService removed because calIIcsService is no longer available in TB128
 
 function calendarSummary(calendar) {
   return {
@@ -164,22 +157,13 @@ async function getCalendarItems(calendar) {
 }
 
 function serializeEvent(item) {
-  const component = item.icalComponent;
-  if (!component) {
+  if (!item || !item.icalString) {
     return null;
   }
 
-  const icsService = getIcsService();
-  const vcalendar = icsService.createIcalComponent("VCALENDAR");
-  const version = icsService.createIcalProperty("VERSION");
-  version.value = "2.0";
-  vcalendar.addProperty(version);
-  const prodid = icsService.createIcalProperty("PRODID");
-  prodid.value = "-//Local Calendar CalDAV Mirror//EN";
-  vcalendar.addProperty(prodid);
-  vcalendar.addSubcomponent(component.clone());
-
-  return stripSchedulingMethod(vcalendar.serializeToICS());
+  // item.icalString already returns a full VCALENDAR-wrapped string.
+  // Just clean up any scheduling METHOD property that some servers reject.
+  return stripSchedulingMethod(item.icalString);
 }
 
 var CalDavSync = class extends ExtensionCommon.ExtensionAPI {
@@ -229,7 +213,7 @@ var CalDavSync = class extends ExtensionCommon.ExtensionAPI {
           });
         },
 
-        exportCalendar(calendarId) {
+        exportCalendar(calendarId, syncPastMonths = 0, syncFutureMonths = 0) {
           return wrapResult(async () => {
             const calendar = getCalendar(calendarId);
             if (!calendar) {
@@ -239,12 +223,38 @@ var CalDavSync = class extends ExtensionCommon.ExtensionAPI {
               throw new Error(`Refusing to mirror non-local calendar: ${calendar.name}`);
             }
 
+            const now = new Date();
+            let pastLimit = null;
+            let futureLimit = null;
+            
+            if (syncPastMonths > 0) {
+              pastLimit = new Date(now);
+              pastLimit.setMonth(pastLimit.getMonth() - syncPastMonths);
+            }
+            if (syncFutureMonths > 0) {
+              futureLimit = new Date(now);
+              futureLimit.setMonth(futureLimit.getMonth() + syncFutureMonths);
+            }
+
             const items = await getCalendarItems(calendar);
             const events = [];
             for (const item of items) {
               if (!item.isEvent?.()) {
                 continue;
               }
+
+              // Apply sync window filter to non-recurring events
+              if (!item.recurrenceInfo && (pastLimit || futureLimit)) {
+                // Get JS Date bounds
+                const start = item.startDate?.jsDate || item.entryDate?.jsDate;
+                const end = item.endDate?.jsDate || item.dueDate?.jsDate || start;
+                
+                if (start && end) {
+                  if (pastLimit && end < pastLimit) continue;
+                  if (futureLimit && start > futureLimit) continue;
+                }
+              }
+
               const ics = serializeEvent(item);
               const uid = itemUid(item);
               if (!ics || !uid) {
@@ -267,9 +277,81 @@ var CalDavSync = class extends ExtensionCommon.ExtensionAPI {
               events
             };
           });
+        },
+
+        savePassword(username, password) {
+          return wrapResult(async () => {
+            const ORIGIN = "chrome://caldavsync";
+            const REALM = "CalDavSync";
+
+            const logins = await Services.logins.searchLoginsAsync({
+              origin: ORIGIN,
+              httpRealm: REALM
+            });
+            const existing = logins.find(l => l.username === (username || "default"));
+
+            // addLoginAsync/modifyLoginAsync require a real nsILoginInfo XPCOM object,
+            // not a plain JS object (they call QueryInterface internally).
+            const loginInfo = Components.classes["@mozilla.org/login-manager/loginInfo;1"]
+              .createInstance(Components.interfaces.nsILoginInfo);
+            // init(origin, formActionOrigin, httpRealm, username, password, usernameField, passwordField)
+            loginInfo.init(ORIGIN, null, REALM, username || "default", password, "", "");
+
+            if (existing) {
+              await Services.logins.modifyLoginAsync(existing, loginInfo);
+            } else {
+              await Services.logins.addLoginAsync(loginInfo);
+            }
+          });
+        },
+
+        loadPassword(username) {
+          return wrapResult(async () => {
+            const ORIGIN = "chrome://caldavsync";
+            const REALM = "CalDavSync";
+            const logins = await Services.logins.searchLoginsAsync({
+              origin: ORIGIN,
+              httpRealm: REALM
+            });
+            const existing = logins.find(l => l.username === (username || "default"));
+            return existing ? existing.password : "";
+          });
+        },
+
+        hasPassword(username) {
+          return wrapResult(async () => {
+            const ORIGIN = "chrome://caldavsync";
+            const REALM = "CalDavSync";
+            const logins = await Services.logins.searchLoginsAsync({
+              origin: ORIGIN,
+              httpRealm: REALM
+            });
+            const existing = logins.find(l => l.username === (username || "default"));
+            return !!existing;
+          });
+        },
+
+        clearPassword(username) {
+          return wrapResult(async () => {
+            const ORIGIN = "chrome://caldavsync";
+            const REALM = "CalDavSync";
+            const logins = await Services.logins.searchLoginsAsync({
+              origin: ORIGIN,
+              httpRealm: REALM
+            });
+            const existing = logins.find(l => l.username === (username || "default"));
+            if (existing) {
+              await Services.logins.removeLoginAsync(existing);
+            }
+          });
         }
       }
     };
+  }
+
+  onStartup() {
+    // Required by manifest "events": ["startup"].
+    // Called before getAPI(); nothing extra needed here.
   }
 
   onShutdown(isAppShutdown) {

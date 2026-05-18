@@ -1,5 +1,23 @@
 "use strict";
 
+// ── First-run disclaimer ──────────────────────────────────────────────
+(async () => {
+  const KEY = "disclaimerAccepted";
+  const { [KEY]: accepted } = await browser.storage.local.get(KEY);
+  if (!accepted) {
+    const overlay = document.getElementById("disclaimerOverlay");
+    const layout  = document.querySelector(".layout");
+    overlay.hidden = false;
+    layout.style.visibility = "hidden";
+
+    document.getElementById("disclaimerAccept").addEventListener("click", async () => {
+      await browser.storage.local.set({ [KEY]: true });
+      overlay.hidden = true;
+      layout.style.visibility = "";
+    }, { once: true });
+  }
+})();
+
 const fields = {
   calendarId: document.getElementById("calendarId"),
   collectionUrl: document.getElementById("collectionUrl"),
@@ -7,12 +25,21 @@ const fields = {
   password: document.getElementById("password"),
   intervalMinutes: document.getElementById("intervalMinutes"),
   deleteLimitPercent: document.getElementById("deleteLimitPercent"),
+  syncPastMonths: document.getElementById("syncPastMonths"),
+  syncFutureMonths: document.getElementById("syncFutureMonths"),
   enabled: document.getElementById("enabled")
 };
 
 const statusNode = document.getElementById("status");
 const logsNode = document.getElementById("logs");
 const passwordStatusNode = document.getElementById("passwordStatus");
+
+// Live progress from background sync
+browser.runtime.onMessage.addListener(msg => {
+  if (msg?.type === "_syncProgress") {
+    setStatus(`⏳ ${msg.message}`);
+  }
+});
 
 function setStatus(value) {
   statusNode.textContent = typeof value === "string" ? value : JSON.stringify(value, null, 2);
@@ -26,6 +53,8 @@ function readSettings() {
     password: fields.password.value,
     intervalMinutes: Number(fields.intervalMinutes.value || 15),
     deleteLimitPercent: Number(fields.deleteLimitPercent.value || 30),
+    syncPastMonths: Number(fields.syncPastMonths.value || 0),
+    syncFutureMonths: Number(fields.syncFutureMonths.value || 0),
     enabled: fields.enabled.checked
   };
 }
@@ -37,9 +66,11 @@ function writeSettings(settings) {
   fields.password.value = "";
   fields.intervalMinutes.value = settings.intervalMinutes || 15;
   fields.deleteLimitPercent.value = settings.deleteLimitPercent || 30;
+  fields.syncPastMonths.value = settings.syncPastMonths || 0;
+  fields.syncFutureMonths.value = settings.syncFutureMonths || 0;
   fields.enabled.checked = !!settings.enabled;
   passwordStatusNode.textContent = settings.hasSavedPassword
-    ? "A CalDAV password is saved encrypted in local extension storage."
+    ? "A CalDAV password is saved in Thunderbird's Password Manager."
     : "No CalDAV password is saved.";
 }
 
@@ -87,6 +118,7 @@ async function withBusy(button, action) {
     const result = await action();
     setStatus(result || "Done.");
     await refreshLogs();
+    await refreshSyncStatus();
   } catch (error) {
     setStatus(error.message);
   } finally {
@@ -115,7 +147,17 @@ document.getElementById("save").addEventListener("click", event => {
 });
 
 document.getElementById("validate").addEventListener("click", event => {
-  withBusy(event.currentTarget, () => send("validateCalDav", { settings: readSettings() }));
+  withBusy(event.currentTarget, async () => {
+    const result = await send("validateCalDav", { settings: readSettings() });
+    // Show inline feedback near the credentials, not just in the log panel
+    const ok = result?.ok ?? (typeof result === "object" ? true : !!result);
+    const msg = typeof result === "string"
+      ? result
+      : (result?.message || result?.status || (ok ? "Connected successfully." : "Connection failed."));
+    passwordStatusNode.textContent = ok ? `✓ ${msg}` : `✗ ${msg}`;
+    passwordStatusNode.className = ok ? "password-status status-ok" : "password-status status-err";
+    return result;
+  });
 });
 
 document.getElementById("clearCredentials").addEventListener("click", event => {
@@ -168,6 +210,37 @@ document.getElementById("resetState").addEventListener("click", event => {
   });
 });
 
+// ── Sync status badge ─────────────────────────────────────────────────
+function timeAgo(isoString) {
+  const diffMs = Date.now() - new Date(isoString).getTime();
+  const diffMin = Math.floor(diffMs / 60000);
+  if (diffMin < 1) return "just now";
+  if (diffMin < 60) return `${diffMin}m ago`;
+  const diffH = Math.floor(diffMin / 60);
+  if (diffH < 24) return `${diffH}h ago`;
+  return `${Math.floor(diffH / 24)}d ago`;
+}
+
+async function refreshSyncStatus() {
+  const badge = document.getElementById("syncStatus");
+  try {
+    const status = await send("getSyncStatus");
+    if (!status) {
+      badge.textContent = "● Never synced";
+      badge.className = "sync-badge sync-idle";
+    } else if (status.ok) {
+      badge.textContent = `✓ Synced ${timeAgo(status.at)}`;
+      badge.className = "sync-badge sync-ok";
+    } else {
+      badge.textContent = `✗ Failed ${timeAgo(status.at)}`;
+      badge.className = "sync-badge sync-error";
+    }
+  } catch (_) {
+    badge.textContent = "● Idle";
+    badge.className = "sync-badge sync-idle";
+  }
+}
+
 document.addEventListener("DOMContentLoaded", async () => {
   const fallbackSettings = {
     calendarId: "",
@@ -185,6 +258,8 @@ document.addEventListener("DOMContentLoaded", async () => {
     writeSettings(settings);
     await refreshCalendars(settings.calendarId);
     await refreshLogs();
+    await refreshSyncStatus();
+    setInterval(refreshSyncStatus, 30_000);
     setStatus("Ready.");
   } catch (error) {
     setStatus(`Initialization failed: ${error.message}`);
