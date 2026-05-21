@@ -32,6 +32,7 @@ const fields = {
 };
 
 const statusNode = document.getElementById("status");
+const statusPanelNode = document.getElementById("statusPanel");
 const logsNode = document.getElementById("logs");
 const passwordStatusNode = document.getElementById("passwordStatus");
 let hasSavedPassword = false;
@@ -81,6 +82,16 @@ browser.runtime.onMessage.addListener(msg => {
 
 function setStatus(value) {
   statusNode.textContent = typeof value === "string" ? value : JSON.stringify(value, null, 2);
+}
+
+function revealStatusPanel() {
+  if (!statusPanelNode) {
+    return;
+  }
+
+  statusPanelNode.scrollIntoView({ behavior: "smooth", block: "start" });
+  statusPanelNode.classList.add("is-highlighted");
+  setTimeout(() => statusPanelNode.classList.remove("is-highlighted"), 1600);
 }
 
 function requireLocalCalendar(settings) {
@@ -264,7 +275,7 @@ async function refreshLogs() {
   }).join("\n\n");
 }
 
-async function withBusy(button, action) {
+async function withBusy(button, action, { revealStatus = false } = {}) {
   const previous = button.disabled;
   button.disabled = true;
   try {
@@ -281,6 +292,9 @@ async function withBusy(button, action) {
       // Keep the original action error visible.
     }
   } finally {
+    if (revealStatus) {
+      revealStatusPanel();
+    }
     button.disabled = previous;
   }
 }
@@ -377,7 +391,7 @@ document.getElementById("dryRun").addEventListener("click", event => {
     requirePasswordForConnection(settings);
     writeSettings(await send("setSettings", { settings }));
     return send("dryRun");
-  });
+  }, { revealStatus: true });
 });
 
 document.getElementById("syncNow").addEventListener("click", event => {
@@ -388,7 +402,7 @@ document.getElementById("syncNow").addEventListener("click", event => {
     requirePasswordForConnection(settings);
     writeSettings(await send("setSettings", { settings }));
     return send("syncNow", { forceDeletes: false });
-  });
+  }, { revealStatus: true });
 });
 
 document.getElementById("syncForce").addEventListener("click", event => {
@@ -402,7 +416,7 @@ document.getElementById("syncForce").addEventListener("click", event => {
     }
     writeSettings(await send("setSettings", { settings }));
     return send("syncNow", { forceDeletes: true });
-  });
+  }, { revealStatus: true });
 });
 
 document.getElementById("resetState").addEventListener("click", event => {

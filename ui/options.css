@@ -609,6 +609,7 @@ body {
   border: 1px solid var(--color-border);
   border-radius: var(--radius-sm);
   overflow: hidden;
+  transition: border-color 180ms ease, box-shadow 180ms ease;
 }
 
 .status-panel-header {
@@ -626,6 +627,11 @@ body {
   color: var(--color-muted);
   text-transform: uppercase;
   letter-spacing: .4px;
+}
+
+.status-panel.is-highlighted {
+  border-color: var(--color-accent);
+  box-shadow: 0 0 0 3px rgba(88, 166, 255, 0.18);
 }
 
 .dev-btns {
