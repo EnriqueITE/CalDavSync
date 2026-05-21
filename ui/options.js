@@ -89,9 +89,28 @@ function revealStatusPanel() {
     return;
   }
 
-  statusPanelNode.scrollIntoView({ behavior: "smooth", block: "start" });
   statusPanelNode.classList.add("is-highlighted");
   setTimeout(() => statusPanelNode.classList.remove("is-highlighted"), 1600);
+
+  const scrollToPanel = () => {
+    const rect = statusPanelNode.getBoundingClientRect();
+    const currentTop = window.scrollY || document.documentElement.scrollTop || document.body.scrollTop || 0;
+    const targetTop = Math.max(0, currentTop + rect.top - 16);
+
+    window.scrollTo(0, targetTop);
+    document.documentElement.scrollTop = targetTop;
+    document.body.scrollTop = targetTop;
+    statusPanelNode.scrollIntoView({ block: "start", inline: "nearest" });
+    try {
+      statusPanelNode.focus({ preventScroll: false });
+    } catch (_error) {
+      statusPanelNode.focus();
+    }
+  };
+
+  scrollToPanel();
+  requestAnimationFrame(scrollToPanel);
+  setTimeout(scrollToPanel, 80);
 }
 
 function requireLocalCalendar(settings) {
