@@ -32,7 +32,6 @@ const fields = {
 };
 
 const statusNode = document.getElementById("status");
-const statusPanelNode = document.getElementById("statusPanel");
 const logsNode = document.getElementById("logs");
 const passwordStatusNode = document.getElementById("passwordStatus");
 let hasSavedPassword = false;
@@ -82,35 +81,6 @@ browser.runtime.onMessage.addListener(msg => {
 
 function setStatus(value) {
   statusNode.textContent = typeof value === "string" ? value : JSON.stringify(value, null, 2);
-}
-
-function revealStatusPanel() {
-  if (!statusPanelNode) {
-    return;
-  }
-
-  statusPanelNode.classList.add("is-highlighted");
-  setTimeout(() => statusPanelNode.classList.remove("is-highlighted"), 1600);
-
-  const scrollToPanel = () => {
-    const rect = statusPanelNode.getBoundingClientRect();
-    const currentTop = window.scrollY || document.documentElement.scrollTop || document.body.scrollTop || 0;
-    const targetTop = Math.max(0, currentTop + rect.top - 16);
-
-    window.scrollTo(0, targetTop);
-    document.documentElement.scrollTop = targetTop;
-    document.body.scrollTop = targetTop;
-    statusPanelNode.scrollIntoView({ block: "start", inline: "nearest" });
-    try {
-      statusPanelNode.focus({ preventScroll: false });
-    } catch (_error) {
-      statusPanelNode.focus();
-    }
-  };
-
-  scrollToPanel();
-  requestAnimationFrame(scrollToPanel);
-  setTimeout(scrollToPanel, 80);
 }
 
 function requireLocalCalendar(settings) {
@@ -294,7 +264,7 @@ async function refreshLogs() {
   }).join("\n\n");
 }
 
-async function withBusy(button, action, { revealStatus = false } = {}) {
+async function withBusy(button, action) {
   const previous = button.disabled;
   button.disabled = true;
   try {
@@ -311,9 +281,6 @@ async function withBusy(button, action, { revealStatus = false } = {}) {
       // Keep the original action error visible.
     }
   } finally {
-    if (revealStatus) {
-      revealStatusPanel();
-    }
     button.disabled = previous;
   }
 }
@@ -410,7 +377,7 @@ document.getElementById("dryRun").addEventListener("click", event => {
     requirePasswordForConnection(settings);
     writeSettings(await send("setSettings", { settings }));
     return send("dryRun");
-  }, { revealStatus: true });
+  });
 });
 
 document.getElementById("syncNow").addEventListener("click", event => {
@@ -421,7 +388,7 @@ document.getElementById("syncNow").addEventListener("click", event => {
     requirePasswordForConnection(settings);
     writeSettings(await send("setSettings", { settings }));
     return send("syncNow", { forceDeletes: false });
-  }, { revealStatus: true });
+  });
 });
 
 document.getElementById("syncForce").addEventListener("click", event => {
@@ -435,7 +402,7 @@ document.getElementById("syncForce").addEventListener("click", event => {
     }
     writeSettings(await send("setSettings", { settings }));
     return send("syncNow", { forceDeletes: true });
-  }, { revealStatus: true });
+  });
 });
 
 document.getElementById("resetState").addEventListener("click", event => {
