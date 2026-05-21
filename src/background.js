@@ -28,14 +28,49 @@ async function getSettings() {
   };
 }
 
+function requireValidNumber(value, label, min, max = Infinity) {
+  if (!Number.isInteger(value) || value < min || value > max) {
+    const range = max === Infinity ? `${min} or higher` : `between ${min} and ${max}`;
+    throw new Error(`${label} must be ${range}.`);
+  }
+}
+
+function validateSettingsShape(settings) {
+  requireValidNumber(Number(settings.intervalMinutes), "Sync interval", 1);
+  requireValidNumber(Number(settings.deleteLimitPercent), "Delete guard", 1, 100);
+  requireValidNumber(Number(settings.syncPastMonths), "Sync past months", 0);
+  requireValidNumber(Number(settings.syncFutureMonths), "Sync future months", 0);
+  if (settings.collectionUrl) {
+    CalDav.normalizeCollectionUrl(settings.collectionUrl);
+  }
+}
+
+async function assertCanEnable(settings) {
+  if (!settings.enabled) {
+    return;
+  }
+  if (!settings.calendarId) {
+    throw new Error("Select a local Thunderbird calendar before enabling automatic sync.");
+  }
+  if (!settings.collectionUrl) {
+    throw new Error("Configure a CalDAV collection URL before enabling automatic sync.");
+  }
+  if (!settings.password && !await Secrets.hasPassword(settings.username)) {
+    throw new Error("Enter and save a CalDAV password before enabling automatic sync.");
+  }
+}
+
 async function setSettings(settings) {
-  if (settings.password) {
-    await Secrets.savePassword(settings.username, settings.password);
+  const nextSettings = { ...DEFAULT_SETTINGS, ...(settings || {}) };
+  validateSettingsShape(nextSettings);
+  await assertCanEnable(nextSettings);
+  if (nextSettings.password) {
+    await Secrets.savePassword(nextSettings.username, nextSettings.password);
   }
   await browser.storage.local.set({
     settings: {
       ...DEFAULT_SETTINGS,
-      ...sanitizeSettings(settings)  // password stripped here
+      ...sanitizeSettings(nextSettings)  // password stripped here
     }
   });
   await configureAlarm();
@@ -188,39 +223,8 @@ browser.alarms.onAlarm.addListener(async alarm => {
   }
 });
 
-// ── #4 Reactive sync — debounced on calendar item changes ─────────────
-let _reactiveDebounceTimer = null;
-const REACTIVE_DEBOUNCE_MS = 30_000; // 30 s cooldown after last change
-
-async function scheduleReactiveSync() {
-  if (_reactiveDebounceTimer) {
-    clearTimeout(_reactiveDebounceTimer);
-  }
-  _reactiveDebounceTimer = setTimeout(async () => {
-    _reactiveDebounceTimer = null;
-    try {
-      const settings = await getSettings();
-      if (!settings.enabled || !settings.calendarId) return;
-      await runSync();
-    } catch (error) {
-      await appendLog("error", `Reactive sync failed: ${error.message}`);
-    }
-  }, REACTIVE_DEBOUNCE_MS);
-}
-
-// Listen for calendar item mutations via the experiment API
-// (registered after the extension API is available)
-browser.runtime.onMessage.addListener(msg => {
-  if (msg?.type === "_calendarItemChanged") {
-    scheduleReactiveSync();
-  }
-});
-
-// ── Message handler ───────────────────────────────────────────────────
+// Message handler.
 async function handleMessage(message) {
-  if (message?.type === "pingExperiment") {
-    return browser.CalDavSync.ping();
-  }
   if (message?.type === "listCalendars") {
     return browser.CalDavSync.listCalendars();
   }
@@ -270,8 +274,7 @@ browser.runtime.onMessage.addListener(async message => {
     await appendLog("error", error.message, { type: message?.type, stack: error.stack || "" });
     return {
       ok: false,
-      error: error.message || String(error),
-      stack: error.stack || ""
+      error: error.message || String(error)
     };
   }
 });

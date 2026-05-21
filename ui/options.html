@@ -21,7 +21,8 @@
         <div class="disclaimer-body">
           <p class="disclaimer-intro">
             CalDavSync mirrors your local Thunderbird calendar to a private CalDAV server.
-            Please read the following before using it.
+            Thunderbird may show a broad full-access permission because this add-on uses
+            a Thunderbird Experiment API. Please read the following before using it.
           </p>
 
           <div class="disclaimer-section">
@@ -31,6 +32,16 @@
               <li>Deleting an event in Thunderbird will delete it on the server on the next sync.</li>
               <li>A configurable <em>Delete guard</em> blocks sync if more than a set percentage of your events would be deleted at once — protecting you from accidental bulk wipes. You can adjust the threshold in settings or bypass it entirely with <em>Force sync</em>.</li>
               <li>Your credentials are stored securely in <strong>Thunderbird's native Password Manager</strong>.</li>
+            </ul>
+          </div>
+
+          <div class="disclaimer-section disclaimer-section--permission">
+            <h2 class="disclaimer-section-title">About the Thunderbird permission</h2>
+            <ul class="disclaimer-list">
+              <li>Thunderbird shows the full-access warning for add-ons that use Experiment APIs.</li>
+              <li>CalDavSync needs that API to read the selected local calendar and use Thunderbird's Password Manager.</li>
+              <li>It does not read mail, contacts, local files, telemetry, or analytics.</li>
+              <li>Calendar data and CalDAV credentials are sent only to the HTTPS CalDAV collection URL you configure.</li>
             </ul>
           </div>
 
@@ -73,11 +84,12 @@
           <li><a href="#section-schedule" class="nav-link">Schedule</a></li>
           <li><a href="#section-actions" class="nav-link">Sync Actions</a></li>
           <li><a href="#section-log" class="nav-link">Activity Log</a></li>
+          <li><a href="#section-permissions" class="nav-link">Permissions</a></li>
         </ul>
         <div class="sidebar-footer">
           <span id="syncStatus" class="sync-badge sync-idle">● Idle</span>
           <div class="sidebar-author">
-            <span class="author-name">by Enrique Serrano</span>
+            <span class="author-name">by Enrique Serrano Aparicio</span>
             <a href="https://buymeacoffee.com/enriqueite" target="_blank" rel="noopener" class="bmc-link" title="Buy me a coffee ☕">
               ☕ Support this project
             </a>
@@ -225,13 +237,20 @@
           <div class="status-panel">
             <div class="status-panel-header">
               <span class="status-panel-title">Last result</span>
-              <div class="dev-btns">
-                <button id="pingExperiment" type="button" class="btn btn-ghost btn-xs">Ping API</button>
-                <button id="diagnostics" type="button" class="btn btn-ghost btn-xs">Diagnostics</button>
-              </div>
+              <button id="copyStatus" type="button" class="btn btn-ghost btn-xs">Copy</button>
             </div>
             <pre id="status" class="output-box"></pre>
           </div>
+
+          <details class="advanced-panel">
+            <summary>Advanced troubleshooting</summary>
+            <div class="advanced-panel-body">
+              <p>Use these checks only when calendar detection or the privileged Thunderbird API needs investigation.</p>
+              <div class="dev-btns">
+                <button id="diagnostics" type="button" class="btn btn-ghost btn-xs">Diagnostics</button>
+              </div>
+            </div>
+          </details>
         </section>
 
         <!-- Activity log -->
@@ -243,6 +262,35 @@
             </div>
           </div>
           <pre id="logs" class="output-box output-box--tall"></pre>
+        </section>
+
+        <!-- Permissions -->
+        <section class="card" id="section-permissions">
+          <div class="card-header">
+            <div>
+              <h2 class="card-title">Permissions &amp; Privacy</h2>
+              <p class="card-desc">Why Thunderbird asks for broad access and what CalDavSync actually uses.</p>
+            </div>
+          </div>
+
+          <div class="trust-grid">
+            <div class="trust-item">
+              <span class="trust-label">Thunderbird Experiment API</span>
+              <p>Required to read the selected local calendar and to store the CalDAV password in Thunderbird's native Password Manager.</p>
+            </div>
+            <div class="trust-item">
+              <span class="trust-label">Network access</span>
+              <p>Used only for validation and sync requests to the HTTPS CalDAV collection URL configured here.</p>
+            </div>
+            <div class="trust-item">
+              <span class="trust-label">Local storage</span>
+              <p>Stores settings and sync state. The CalDAV password is not stored in extension storage.</p>
+            </div>
+            <div class="trust-item trust-item--quiet">
+              <span class="trust-label">Not used for</span>
+              <p>Reading mail, contacts, local files, telemetry, analytics, ads, tracking, or loading remote code.</p>
+            </div>
+          </div>
         </section>
 
       </main>

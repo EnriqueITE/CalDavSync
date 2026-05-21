@@ -23,8 +23,30 @@ function timeAgo(isoString) {
   return `${Math.floor(diffH / 24)}d ago`;
 }
 
+function firstMissingConfiguration(settings) {
+  if (!settings?.calendarId) {
+    return "Select a local calendar in options.";
+  }
+  if (!settings?.collectionUrl) {
+    return "Configure a CalDAV collection URL in options.";
+  }
+  if (!settings?.hasSavedPassword) {
+    return "Save a CalDAV password in options.";
+  }
+  return "";
+}
+
 async function refreshStatus() {
   try {
+    const settings = await send("getSettings");
+    const missingConfiguration = firstMissingConfiguration(settings);
+    if (missingConfiguration) {
+      statusText.textContent = "Not configured";
+      statusText.className = "status-text status-idle";
+      statusDetails.textContent = missingConfiguration;
+      return;
+    }
+
     const status = await send("getSyncStatus");
     if (!status) {
       statusText.textContent = "● Never synced";
@@ -61,14 +83,24 @@ syncBtn.addEventListener("click", async () => {
   statusText.className = "status-text status-idle";
   statusDetails.textContent = "Please wait";
   try {
+    const settings = await send("getSettings");
+    const missingConfiguration = firstMissingConfiguration(settings);
+    if (missingConfiguration) {
+      statusText.textContent = "Not configured";
+      statusText.className = "status-text status-idle";
+      statusDetails.textContent = missingConfiguration;
+      return;
+    }
     await send("syncNow");
   } catch (error) {
-    // Errors are already handled by background.js appending logs,
-    // but we refresh to show the failed state.
+    statusText.textContent = "✕ Sync failed";
+    statusText.className = "status-text status-err";
+    statusDetails.textContent = error.message;
+    return;
   } finally {
     syncBtn.disabled = false;
-    await refreshStatus();
   }
+  await refreshStatus();
 });
 
 optionsBtn.addEventListener("click", () => {

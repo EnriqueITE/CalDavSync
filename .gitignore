@@ -1,2 +1,9 @@
 *.xpi
+*.zip
+web-ext-artifacts/
+*.log
+*.tmp
+*.bak
+.DS_Store
+Thumbs.db
 

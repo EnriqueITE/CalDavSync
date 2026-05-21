@@ -8,7 +8,7 @@ $packageName = "CalDavSync-v$version.xpi"
 $zipName = "CalDavSync-v$version.zip"
 $packagePath = Join-Path $root $packageName
 $zipPath = Join-Path $root $zipName
-$includeRoots = @("manifest.json", "api", "src", "ui", "README.md", "TESTING.md")
+$includeRoots = @("manifest.json", "api", "src", "ui", "icons")
 
 function Add-ZipEntry {
   param(
@@ -47,6 +47,13 @@ try {
   node --check api/localCalendarMirror/implementation.js
   node -e "JSON.parse(require('fs').readFileSync('manifest.json','utf8')); JSON.parse(require('fs').readFileSync('api/localCalendarMirror/schema.json','utf8'));"
 
+  $manifestIcons = @($manifest.icons.PSObject.Properties.Value)
+  foreach ($iconPath in $manifestIcons) {
+    if (-not (Test-Path (Join-Path $root $iconPath) -PathType Leaf)) {
+      throw "Manifest icon is missing: $iconPath"
+    }
+  }
+
   Add-Type -AssemblyName System.IO.Compression
   Add-Type -AssemblyName System.IO.Compression.FileSystem
   $archive = [System.IO.Compression.ZipFile]::Open($zipPath, [System.IO.Compression.ZipArchiveMode]::Create)
@@ -68,6 +75,19 @@ try {
   }
 
   Move-Item -LiteralPath $zipPath -Destination $packagePath -Force
+
+  Add-Type -AssemblyName System.IO.Compression.FileSystem
+  $createdArchive = [System.IO.Compression.ZipFile]::OpenRead($packagePath)
+  try {
+    foreach ($entry in $createdArchive.Entries) {
+      if ($entry.FullName.Contains("\")) {
+        throw "Invalid ZIP entry path separator: $($entry.FullName)"
+      }
+    }
+  } finally {
+    $createdArchive.Dispose()
+  }
+
   Write-Host "Created $packageName"
 } finally {
   Pop-Location

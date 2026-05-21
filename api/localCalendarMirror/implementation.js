@@ -174,14 +174,6 @@ var CalDavSync = class extends ExtensionCommon.ExtensionAPI {
 
     return {
       CalDavSync: {
-        ping() {
-          return wrapResult(() => ({
-            ok: true,
-            namespace: "CalDavSync",
-            at: new Date().toISOString()
-          }));
-        },
-
         listCalendars() {
           return wrapResult(() => {
             const managerCalendars = getCalendars().map(calendarSummary);

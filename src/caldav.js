@@ -8,7 +8,36 @@ const CalDav = (() => {
     if (!trimmed) {
       throw new Error("CalDAV collection URL is required.");
     }
-    return trimmed.endsWith("/") ? trimmed : `${trimmed}/`;
+    let parsed;
+    try {
+      parsed = new URL(trimmed);
+    } catch (_error) {
+      throw new Error("CalDAV collection URL is invalid.");
+    }
+    if (parsed.protocol !== "https:") {
+      throw new Error("CalDAV collection URL must use HTTPS.");
+    }
+    if (parsed.username || parsed.password) {
+      throw new Error("CalDAV collection URL must not include embedded credentials.");
+    }
+    if (parsed.search || parsed.hash) {
+      throw new Error("CalDAV collection URL must not include a query string or fragment.");
+    }
+    if (!parsed.pathname.endsWith("/")) {
+      parsed.pathname = `${parsed.pathname}/`;
+    }
+    return parsed.toString();
+  }
+
+  function urlForLog(url) {
+    try {
+      const parsed = new URL(url);
+      parsed.username = "";
+      parsed.password = "";
+      return parsed.toString();
+    } catch (_error) {
+      return "[invalid URL]";
+    }
   }
 
   function eventUrl(collectionUrl, uid) {
@@ -67,7 +96,7 @@ const CalDav = (() => {
     });
     const text = await response.text();
     if (!response.ok && response.status !== 207) {
-      throw new Error(`${method} ${url} failed: HTTP ${response.status} ${response.statusText}${text ? ` - ${text.slice(0, 500)}` : ""}`);
+      throw new Error(`${method} ${urlForLog(url)} failed: HTTP ${response.status} ${response.statusText}${text ? ` - ${text.slice(0, 500)}` : ""}`);
     }
     return { response, text };
   }

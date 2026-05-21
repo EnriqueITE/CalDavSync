@@ -1,0 +1,40 @@
+<svg width="1200" height="630" viewBox="0 0 1200 630" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="title desc">
+  <title id="title">CalDavSync preview</title>
+  <desc id="desc">A GitHub preview image for the CalDavSync Thunderbird extension.</desc>
+  <rect width="1200" height="630" rx="36" fill="#0f1117"/>
+  <rect x="56" y="54" width="1088" height="522" rx="28" fill="#171b25" stroke="#2a2f3d" stroke-width="2"/>
+  <rect x="96" y="96" width="270" height="438" rx="20" fill="#111620" stroke="#2a2f3d" stroke-width="2"/>
+  <circle cx="146" cy="150" r="30" fill="#4f6ef7"/>
+  <path d="M132 151.5c0-10 6.8-17.5 15.8-17.5 9.6 0 16.2 7.2 16.2 17.5 0 9.8-6.8 17.5-16.2 17.5-9.2 0-15.8-7.4-15.8-17.5Z" fill="#f8fbff"/>
+  <path d="M142 151.6c0-4 2.2-6.9 5.8-6.9 3.7 0 6 2.8 6 6.9 0 3.9-2.3 6.9-6 6.9-3.6 0-5.8-3-5.8-6.9Z" fill="#4f6ef7"/>
+  <text x="190" y="145" fill="#f4f7ff" font-family="Segoe UI, Arial, sans-serif" font-size="28" font-weight="700">CalDavSync</text>
+  <text x="190" y="174" fill="#8891aa" font-family="Segoe UI, Arial, sans-serif" font-size="15">Calendar Mirror</text>
+  <rect x="126" y="226" width="210" height="34" rx="9" fill="#222838"/>
+  <rect x="126" y="278" width="178" height="16" rx="8" fill="#343b4d"/>
+  <rect x="126" y="314" width="202" height="16" rx="8" fill="#343b4d"/>
+  <rect x="126" y="350" width="152" height="16" rx="8" fill="#343b4d"/>
+  <rect x="126" y="454" width="170" height="34" rx="17" fill="#183326"/>
+  <circle cx="146" cy="471" r="6" fill="#22c55e"/>
+  <text x="164" y="476" fill="#86efac" font-family="Segoe UI, Arial, sans-serif" font-size="14" font-weight="600">Ready to sync</text>
+  <text x="416" y="148" fill="#f4f7ff" font-family="Segoe UI, Arial, sans-serif" font-size="54" font-weight="800">Local Thunderbird</text>
+  <text x="416" y="208" fill="#f4f7ff" font-family="Segoe UI, Arial, sans-serif" font-size="54" font-weight="800">calendar to CalDAV</text>
+  <text x="416" y="258" fill="#aeb7cb" font-family="Segoe UI, Arial, sans-serif" font-size="22">One-way mirroring with dry-run planning, backup export, and delete protection.</text>
+  <g>
+    <rect x="416" y="328" width="218" height="74" rx="16" fill="#111620" stroke="#2a2f3d" stroke-width="2"/>
+    <text x="442" y="358" fill="#8891aa" font-family="Segoe UI, Arial, sans-serif" font-size="15">Source</text>
+    <text x="442" y="384" fill="#f4f7ff" font-family="Segoe UI, Arial, sans-serif" font-size="21" font-weight="700">Local calendar</text>
+    <path d="M660 365h84" stroke="#4f6ef7" stroke-width="5" stroke-linecap="round"/>
+    <path d="m744 365-18-14v28l18-14Z" fill="#4f6ef7"/>
+    <rect x="772" y="328" width="250" height="74" rx="16" fill="#111620" stroke="#2a2f3d" stroke-width="2"/>
+    <text x="798" y="358" fill="#8891aa" font-family="Segoe UI, Arial, sans-serif" font-size="15">Target</text>
+    <text x="798" y="384" fill="#f4f7ff" font-family="Segoe UI, Arial, sans-serif" font-size="21" font-weight="700">Private CalDAV</text>
+  </g>
+  <g>
+    <rect x="416" y="448" width="160" height="42" rx="21" fill="#1f2d57"/>
+    <text x="447" y="475" fill="#b9c8ff" font-family="Segoe UI, Arial, sans-serif" font-size="16" font-weight="700">Dry run</text>
+    <rect x="594" y="448" width="180" height="42" rx="21" fill="#173425"/>
+    <text x="626" y="475" fill="#9bf2bd" font-family="Segoe UI, Arial, sans-serif" font-size="16" font-weight="700">Backup first</text>
+    <rect x="792" y="448" width="212" height="42" rx="21" fill="#3a2c14"/>
+    <text x="825" y="475" fill="#ffd792" font-family="Segoe UI, Arial, sans-serif" font-size="16" font-weight="700">Delete guard</text>
+  </g>
+</svg>
