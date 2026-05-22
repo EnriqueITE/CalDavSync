@@ -151,8 +151,7 @@ function formatConnectionResult(result) {
   }
 
   if (result?.ok) {
-    const statusSuffix = result.status ? ` (HTTP ${result.status})` : "";
-    return `Connection successful. CalDAV server responded correctly${statusSuffix}.`;
+    return "Connection successful. CalDAV endpoint is reachable and credentials were accepted.";
   }
 
   return "Connection failed.";
