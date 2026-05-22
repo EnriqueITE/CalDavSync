@@ -55,7 +55,7 @@ async function refreshStatus() {
     } else if (status.ok) {
       statusText.textContent = `✓ Synced ${timeAgo(status.at)}`;
       statusText.className = "status-text status-ok";
-      statusDetails.textContent = `+${status.create} ↻${status.update} -${status.delete}`;
+      statusDetails.textContent = `${status.create} created · ${status.update} updated · ${status.delete} deleted`;
     } else {
       statusText.textContent = `✗ Failed ${timeAgo(status.at)}`;
       statusText.className = "status-text status-err";
