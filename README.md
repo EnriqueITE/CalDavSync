@@ -12,7 +12,7 @@
   <img alt="Thunderbird 128+" src="https://img.shields.io/badge/Thunderbird-128%2B-0a84ff">
   <img alt="Manifest V2" src="https://img.shields.io/badge/Manifest-MV2-5b6ee1">
   <img alt="CalDAV" src="https://img.shields.io/badge/Protocol-CalDAV-16a34a">
-  <img alt="Version 0.5.12" src="https://img.shields.io/badge/version-0.5.12-111827">
+  <img alt="Version 0.5.14" src="https://img.shields.io/badge/version-0.5.14-111827">
 </p>
 
 <p align="center">
