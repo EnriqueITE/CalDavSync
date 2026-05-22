@@ -141,6 +141,23 @@ function validateSettings(settings) {
   validateCollectionUrlIfPresent(settings);
 }
 
+function formatConnectionResult(result) {
+  if (typeof result === "string") {
+    return result;
+  }
+
+  if (result?.message) {
+    return result.message;
+  }
+
+  if (result?.ok) {
+    const statusSuffix = result.status ? ` (HTTP ${result.status})` : "";
+    return `Connection successful. CalDAV server responded correctly${statusSuffix}.`;
+  }
+
+  return "Connection failed.";
+}
+
 function requireConnection(settings) {
   requireLocalCalendar(settings);
   requireCollectionUrl(settings);
@@ -337,9 +354,7 @@ document.getElementById("validate").addEventListener("click", event => {
     const result = await send("validateCalDav", { settings });
     // Show inline feedback near the credentials, not just in the log panel
     const ok = result?.ok ?? (typeof result === "object" ? true : !!result);
-    const msg = typeof result === "string"
-      ? result
-      : (result?.message || result?.status || (ok ? "Connected successfully." : "Connection failed."));
+    const msg = formatConnectionResult(result);
     passwordStatusNode.textContent = ok ? `✓ ${msg}` : `✗ ${msg}`;
     passwordStatusNode.className = ok ? "password-status status-ok" : "password-status status-err";
     return result;
