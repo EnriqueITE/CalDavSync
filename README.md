@@ -163,5 +163,4 @@ See [PRIVACY.md](PRIVACY.md).
 
 ## License
 
-CalDavSync is licensed under the GNU General Public License v3.0 or later.
-See [LICENSE](LICENSE).
+CalDavSync is free software licensed under the GNU General Public License v3.0 or later. See [LICENSE](LICENSE) for the standard GPL terms and [NOTICE](NOTICE) for the project copyright notice.
