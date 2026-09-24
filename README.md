@@ -12,7 +12,7 @@
   <img alt="Thunderbird 128+" src="https://img.shields.io/badge/Thunderbird-128%2B-0a84ff">
   <img alt="Manifest V2" src="https://img.shields.io/badge/Manifest-MV2-5b6ee1">
   <img alt="CalDAV" src="https://img.shields.io/badge/Protocol-CalDAV-16a34a">
-  <img alt="Version 0.5.14" src="https://img.shields.io/badge/version-0.5.14-111827">
+  <img alt="Version 0.5.17" src="https://img.shields.io/badge/version-0.5.17-111827">
 </p>
 
 <p align="center">
@@ -117,6 +117,15 @@ See [PRIVACY.md](PRIVACY.md), [SECURITY.md](SECURITY.md), and
 permission model.
 
 ## Build The XPI
+
+### Internal compatibility policy
+
+This privately installed extension keeps `strict_min_version` at `128.0` and
+`strict_max_version` at `*`. Preserve this open upper bound in future packages
+so Thunderbird upgrades do not disable the extension solely by version number.
+This does not guarantee compatibility with future internal calendar API changes;
+those may still require code fixes. Keep the extension ID unchanged to preserve
+existing settings and credentials when installing updates.
 
 Create a release package:
 
